@@ -1,0 +1,71 @@
+import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
+import Home from './pages/Home';
+import Cart from './pages/Cart';
+import Tracking from './pages/Tracking';
+import Admin from './pages/Admin';
+import AdminDashboard from './pages/AdminDashboard'; // <-- TAMBAHAN
+import AdminShipping from './pages/AdminShipping';
+import AdminSettings from './pages/AdminSettings';
+import AdminSettingsHub from './pages/AdminSettingsHub';
+import AdminMenu from './pages/AdminMenu';
+import AdminCouriers from './pages/AdminCouriers';
+import Courier from './pages/Courier';
+import History from './pages/History';
+import Profile from './pages/Profile';
+import { CartProvider } from './context/CartContext';
+import { Toaster } from 'react-hot-toast';
+import Pos from './pages/Pos';
+import AdminReports from './pages/AdminReports'; // <-- Tambah di atas
+import Reupload from './pages/Reupload';
+import AdminSettingsSystem from './pages/AdminSettingsSystem';
+import Login from './pages/Login';
+import ProtectedRoute from './components/ProtectedRoute';
+
+function AppContent() {
+  const location = useLocation();
+  // Cek apakah lagi di halaman admin
+  const isAdminPage = location.pathname.startsWith('/admin');
+
+  return (
+    <div className={isAdminPage ? "min-h-screen bg-gray-50" : "max-w-md mx-auto bg-white min-h-screen shadow-2xl relative"}>
+            <Routes>
+        {/* PUBLIC ROUTES */}
+        <Route path="/login" element={<Login />} />
+        <Route path="/" element={<Home />} />
+        <Route path="/cart" element={<Cart />} />
+        <Route path="/tracking/:orderId" element={<Tracking />} />
+        <Route path="/reupload/:orderId" element={<Reupload />} />
+        <Route path="/history" element={<History />} />
+        <Route path="/profile" element={<Profile />} />
+        <Route path="/kurir" element={<Courier />} />
+
+        {/* PROTECTED ADMIN ROUTES (Wajib Login) */}
+        <Route element={<ProtectedRoute />}>
+          <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/admin/orders" element={<Admin />} />
+          <Route path="/admin/settings" element={<AdminSettingsHub />} />
+          <Route path="/admin/settings/payment" element={<AdminSettings />} />
+          <Route path="/admin/settings/shipping" element={<AdminShipping />} />
+          <Route path="/admin/settings/menu" element={<AdminMenu />} />
+          <Route path="/admin/settings/couriers" element={<AdminCouriers />} />
+          <Route path="/admin/settings/system" element={<AdminSettingsSystem />} />
+          <Route path="/admin/pos" element={<Pos />} />
+          <Route path="/admin/reports" element={<AdminReports />} />
+        </Route>
+      </Routes>
+      <Toaster position="bottom-center" />
+    </div>
+  );
+}
+
+function App() {
+  return (
+    <CartProvider>
+      <BrowserRouter>
+        <AppContent />
+      </BrowserRouter>
+    </CartProvider>
+  );
+}
+
+export default App;
