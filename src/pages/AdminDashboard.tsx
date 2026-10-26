@@ -135,24 +135,27 @@ export default function AdminDashboard() {
         </div>
 
         {/* OFFLINE */}
+                {/* OFFLINE */}
         <div className="bg-gradient-to-br from-[#1F2937] to-[#111827] p-6 rounded-2xl shadow-lg text-white relative overflow-hidden">
           <div className="relative z-10">
             <div className="flex items-center gap-2 mb-2 opacity-90">
               <Store size={18} />
               <p className="text-xs font-bold uppercase tracking-wider">Pendapatan Kasir (Offline / Dine-In)</p>
             </div>
-           {/* Ganti bagian ini di Kartu Statistik Kecil */}
-<h2 className="text-lg font-bold text-gray-800 flex items-center gap-1">
-  <AnimatedNumber value={stats.totalItems} /> Porsi
-</h2>
+            
+            {/* PASTIKAN BAGIAN INI ADA DAN TIDAK KEHAPUS */}
+            <h2 className="text-4xl font-bold mb-3">
+              Rp <AnimatedNumber value={stats.offlineRev} />
+            </h2>
+
             <div className="flex items-center gap-4 text-xs">
               <span className="bg-white/10 px-2 py-1 rounded flex items-center gap-1"><Banknote size={12}/> {stats.offlineOrd} Transaksi Kasir POS</span>
-              <span className="bg-white/10 px-2 py-1 rounded">Rata-rata: Rp {(stats.offlineOrd > 0 ? stats.offlineRev/stats.offlineOrd : 0).toLocaleString('id-ID')}</span>
+              <span className="bg-white/10 px-2 py-1 rounded">Rata-rata: Rp <AnimatedNumber value={stats.offlineOrd > 0 ? stats.offlineRev/stats.offlineOrd : 0} /></span>
             </div>
           </div>
           <Banknote className="absolute -bottom-4 -right-4 text-white opacity-10" size={140} />
         </div>
-      </div>
+      </div> {/* <--- INI YANG HILANG */}
 
       {/* STATISTIK KECIL */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
