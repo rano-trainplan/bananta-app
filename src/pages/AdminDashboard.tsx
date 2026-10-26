@@ -4,6 +4,7 @@ import AdminLayout from '../components/layout/AdminLayout';
 import { TrendingUp, Users, ShoppingBag, Store, Banknote, ArrowRight, Clock, CheckCircle, Calendar } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { Link } from 'react-router-dom'; // IMPORT LINK
+import AnimatedNumber from '../components/ui/AnimatedNumber';
 
 export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
@@ -121,7 +122,10 @@ export default function AdminDashboard() {
               <ShoppingBag size={18} />
               <p className="text-xs font-bold uppercase tracking-wider">Pendapatan Online (Web & WA)</p>
             </div>
-            <h2 className="text-4xl font-bold mb-3">Rp {stats.onlineRev.toLocaleString('id-ID')}</h2>
+            {/* Ganti bagian ini di dalam Kartu Online */}
+<h2 className="text-4xl font-bold mb-3">
+  Rp <AnimatedNumber value={stats.onlineRev} />
+</h2>
             <div className="flex items-center gap-4 text-xs">
               <span className="bg-white/20 px-2 py-1 rounded flex items-center gap-1"><Store size={12}/> {stats.onlineOrd} Pesanan Masuk</span>
               <span className="bg-white/20 px-2 py-1 rounded">Rata-rata: Rp {(stats.onlineOrd > 0 ? stats.onlineRev/stats.onlineOrd : 0).toLocaleString('id-ID')}</span>
@@ -137,7 +141,10 @@ export default function AdminDashboard() {
               <Store size={18} />
               <p className="text-xs font-bold uppercase tracking-wider">Pendapatan Kasir (Offline / Dine-In)</p>
             </div>
-            <h2 className="text-4xl font-bold mb-3">Rp {stats.offlineRev.toLocaleString('id-ID')}</h2>
+           {/* Ganti bagian ini di Kartu Statistik Kecil */}
+<h2 className="text-lg font-bold text-gray-800 flex items-center gap-1">
+  <AnimatedNumber value={stats.totalItems} /> Porsi
+</h2>
             <div className="flex items-center gap-4 text-xs">
               <span className="bg-white/10 px-2 py-1 rounded flex items-center gap-1"><Banknote size={12}/> {stats.offlineOrd} Transaksi Kasir POS</span>
               <span className="bg-white/10 px-2 py-1 rounded">Rata-rata: Rp {(stats.offlineOrd > 0 ? stats.offlineRev/stats.offlineOrd : 0).toLocaleString('id-ID')}</span>

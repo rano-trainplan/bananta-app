@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import AdminLayout from '../components/layout/AdminLayout';
 import { Download, TrendingUp, ShoppingBag, Receipt, Box, Banknote } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import AnimatedNumber from '../components/ui/AnimatedNumber';
 
 export default function AdminReports() {
   const [loading, setLoading] = useState(true);
@@ -126,22 +127,26 @@ export default function AdminReports() {
           <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
             <div className="bg-brand-50 w-8 h-8 rounded-lg flex items-center justify-center text-brand-500 mb-3"><Receipt size={16}/></div>
             <p className="text-[10px] font-bold text-gray-500 uppercase">Total Pendapatan</p>
-            <h2 className="text-xl font-bold text-gray-800">Rp {totalRevenue.toLocaleString('id-ID')}</h2>
+           {/* Total Pendapatan */}
+<h2 className="text-xl font-bold text-gray-800">Rp <AnimatedNumber value={totalRevenue} /></h2>
           </div>
           <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
             <div className="bg-blue-50 w-8 h-8 rounded-lg flex items-center justify-center text-blue-500 mb-3"><ShoppingBag size={16}/></div>
             <p className="text-[10px] font-bold text-gray-500 uppercase">Total Transaksi</p>
-            <h2 className="text-xl font-bold text-gray-800">{totalTransactions}</h2>
+            {/* Total Transaksi */}
+<h2 className="text-xl font-bold text-gray-800"><AnimatedNumber value={totalTransactions} /></h2>
           </div>
           <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
             <div className="bg-purple-50 w-8 h-8 rounded-lg flex items-center justify-center text-purple-500 mb-3"><TrendingUp size={16}/></div>
             <p className="text-[10px] font-bold text-gray-500 uppercase">Rata-rata Transaksi</p>
-            <h2 className="text-xl font-bold text-gray-800">Rp {avgTransaction.toLocaleString('id-ID')}</h2>
+            {/* Rata-rata Transaksi */}
+<h2 className="text-xl font-bold text-gray-800">Rp <AnimatedNumber value={avgTransaction} /></h2>
           </div>
           <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
             <div className="bg-orange-50 w-8 h-8 rounded-lg flex items-center justify-center text-orange-500 mb-3"><Box size={16}/></div>
             <p className="text-[10px] font-bold text-gray-500 uppercase">Total Item Terjual</p>
-            <h2 className="text-xl font-bold text-gray-800">{totalItems}</h2>
+            {/* Total Item Terjual */}
+<h2 className="text-xl font-bold text-gray-800"><AnimatedNumber value={totalItems} /></h2>
           </div>
         </div>
 
