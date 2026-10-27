@@ -3,8 +3,8 @@ import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
 import { Link } from 'react-router-dom';
 import { 
-  CheckCircle, MapPin, Phone, Package, User, Bike, ClipboardList, 
-  TrendingUp, History, Search, LogOut, ShieldCheck, Store, HelpCircle, ArrowLeft 
+  CheckCircle, MapPin, Package, User, Bike, ClipboardList, 
+  TrendingUp, History, LogOut, ShieldCheck, Store, HelpCircle, ArrowLeft, Lock
 } from 'lucide-react';
 
 export default function Courier() {
@@ -14,52 +14,52 @@ export default function Courier() {
   const [proofPhoto, setProofPhoto] = useState<File | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'aktif' | 'riwayat'>('aktif');
-  
-  // State untuk pencarian
-  const [searchQuery, setSearchQuery] = useState('');
 
   // STATE UNTUK SESSION KURIR
   const [couriers, setCouriers] = useState<any[]>([]);
   const [currentCourier, setCurrentCourier] = useState<any>(null);
   const [isCheckingSession, setIsCheckingSession] = useState(true);
   
-  // TAMBAHAN BARU: STATE UNTUK HITUNG TUGAS PER KURIR
-  const [courierTasks, setCourierTasks] = useState<Record<string, number>>({});
+  // STATE UNTUK PIN LOGIN
+  const [selectedCourierForLogin, setSelectedCourierForLogin] = useState<any>(null);
+  const [pinInput, setPinInput] = useState('');
+  const [isPinModalOpen, setIsPinModalOpen] = useState(false);
+
+  // STATE UNTUK STATISTIK DI HALAMAN LOGIN
+  const [loginStats, setLoginStats] = useState<Record<string, { active: number, done: number }>>({});
   const [totalActiveOrders, setTotalActiveOrders] = useState(0);
 
-  // 1. CEK SESSION SAAT PERTAMA KALI BUKA
   useEffect(() => {
     async function checkSession() {
       const savedCourierId = localStorage.getItem('courier_session_id');
       
       if (savedCourierId) {
-        // Kalau udah pernah login, ambil data kurirnya
         const { data } = await supabase.from('couriers').select('*').eq('id', savedCourierId).single();
         if (data) setCurrentCourier(data);
-        else localStorage.removeItem('courier_session_id'); // Kalau kurir dihapus admin, hapus session
+        else localStorage.removeItem('courier_session_id');
       } else {
-        // Kalau belum login, ambil daftar kurir buat ditampilin di layar Login
         const { data } = await supabase.from('couriers').select('*').eq('is_active', true).order('name');
         setCouriers(data || []);
 
-        // TAMBAHAN BARU: Hitung berapa tugas aktif per kurir
-        const { data: activeOrders } = await supabase
-          .from('orders')
-          .select('courier_id')
-          .eq('status', 'Dikirim');
-
+        const { data: activeOrders } = await supabase.from('orders').select('courier_id, status').in('status', ['Dikirim', 'Selesai']);
+        
         if (activeOrders) {
-          // Hitung total semua pesanan aktif untuk badge atas
-          setTotalActiveOrders(activeOrders.length);
-
-          // Hitung per kurir
-          const counts: Record<string, number> = {};
+          const counts: Record<string, { active: number, done: number }> = {};
+          let totalActive = 0;
+          
           activeOrders.forEach(o => {
-            if (o.courier_id) {
-              counts[o.courier_id] = (counts[o.courier_id] || 0) + 1;
+            if (!counts[o.courier_id]) counts[o.courier_id] = { active: 0, done: 0 };
+            
+            if (o.status === 'Dikirim') {
+              counts[o.courier_id].active += 1;
+              totalActive += 1;
+            } else if (o.status === 'Selesai') {
+              counts[o.courier_id].done += 1;
             }
           });
-          setCourierTasks(counts);
+          
+          setLoginStats(counts);
+          setTotalActiveOrders(totalActive);
         }
       }
       setIsCheckingSession(false);
@@ -67,7 +67,6 @@ export default function Courier() {
     checkSession();
   }, []);
 
-  // 2. FETCH DATA PESANAN (Jalan kalau currentCourier udah ada)
   useEffect(() => {
     if (!currentCourier) return;
 
@@ -75,7 +74,7 @@ export default function Courier() {
     
     const channel = supabase.channel('courier-orders')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, (payload) => {
-        if (payload.eventType === 'UPDATE' && payload.new.status === 'Dikirim' && payload.new.courier_id === currentCourier.id) {
+        if (payload.eventType === 'UPDATE' && payload.new.status === 'Dikirim' && !payload.new.courier_id) {
           playNotificationSound();
           toast.success("Pesanan baru siap diantar!");
         }
@@ -94,12 +93,11 @@ export default function Courier() {
   async function fetchData() {
     setLoading(true);
     
-    // FILTER BERDASARKAN COURIER_ID
     const { data: active } = await supabase
       .from('orders')
       .select('*')
       .eq('status', 'Dikirim')
-      .eq('courier_id', currentCourier.id) 
+      .or(`courier_id.is.null,courier_id.eq.${currentCourier.id}`) 
       .order('updated_at', { ascending: false });
     setOrders(active || []);
 
@@ -113,6 +111,19 @@ export default function Courier() {
 
     setLoading(false);
   }
+
+  const handleTakeTask = async (orderId: string) => {
+    const { error } = await supabase.from('orders').update({
+      courier_id: currentCourier.id
+    }).eq('id', orderId).is('courier_id', null);
+
+    if (error) {
+      toast.error("Gagal ambil tugas. Mungkin sudah diambil kurir lain.");
+    } else {
+      toast.success("Tugas berhasil diambil!");
+      fetchData();
+    }
+  };
 
   const handleFinishOrder = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -144,23 +155,35 @@ export default function Courier() {
   const handleLogoutKurir = () => {
     if (confirm("Yakin mau ganti akun kurir?")) {
       localStorage.removeItem('courier_session_id');
-      window.location.reload(); // Refresh biar balik ke layar login
+      window.location.reload();
     }
   };
 
-  // Filter pencarian
-  const filteredActive = orders.filter(o => o.customer_name.toLowerCase().includes(searchQuery.toLowerCase()));
-  const filteredHistory = historyOrders.filter(o => o.customer_name.toLowerCase().includes(searchQuery.toLowerCase()));
+  const handleOpenPin = (courier: any) => {
+    setSelectedCourierForLogin(courier);
+    setPinInput('');
+    setIsPinModalOpen(true);
+  };
 
-  // --- LAYAR 1: LOADING SESSION ---
+  const handleVerifyPin = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (pinInput === selectedCourierForLogin.pin) {
+      localStorage.setItem('courier_session_id', selectedCourierForLogin.id);
+      setCurrentCourier(selectedCourierForLogin);
+      setIsPinModalOpen(false);
+    } else {
+      toast.error("PIN Salah! Coba lagi.");
+      setPinInput('');
+    }
+  };
+
   if (isCheckingSession) return <div className="p-10 text-center font-bold text-gray-500">Memeriksa identitas kurir...</div>;
 
-  // --- LAYAR 2: PILIH KURIR (BELUM LOGIN) ---
+  // --- LAYAR 1: PILIH KURIR ---
   if (!currentCourier) {
     return (
-      <div className="min-h-screen bg-gray-50 flex flex-col">
+      <div className="min-h-screen bg-gray-50 flex flex-col relative">
         
-        {/* HEADER ATAS */}
         <div className="bg-white px-4 py-3 border-b border-gray-100 flex justify-between items-center sticky top-0 z-10">
           <div className="flex items-center gap-3">
             <div className="bg-orange-100 text-orange-500 p-2 rounded-lg">
@@ -179,10 +202,8 @@ export default function Courier() {
           </Link>
         </div>
 
-        {/* KONTEN UTAMA */}
         <div className="flex-1 p-5 max-w-md mx-auto w-full space-y-6 overflow-y-auto pb-24">
           
-          {/* HERO SECTION */}
           <div className="text-center mt-4">
             <div className="relative inline-block mb-4">
               <div className="w-20 h-20 bg-orange-500 rounded-full flex items-center justify-center text-white shadow-lg shadow-orange-200">
@@ -194,18 +215,15 @@ export default function Courier() {
             </div>
             <h2 className="font-bold text-xl text-gray-800 mb-1">Pilih Identitas Kurir</h2>
             <p className="text-xs text-gray-500 leading-relaxed px-4">
-              Pilih profil Anda untuk mulai membuka daftar pesanan, peta lokasi, dan tugas pengantaran aktif.
+              Pilih profil Anda dan masukkan PIN rahasia untuk mulai membuka daftar tugas.
             </p>
             
             <div className="inline-flex items-center gap-1.5 bg-orange-50 text-orange-600 text-[10px] font-bold px-3 py-1.5 rounded-full mt-4 border border-orange-100">
               <span className="w-2 h-2 bg-orange-400 rounded-full animate-pulse"></span>
-              {totalActiveOrders > 0 
-                ? `${totalActiveOrders} Pengantaran Menunggu Saat Ini` 
-                : 'Belum Ada Pengantaran'}
+              {totalActiveOrders > 0 ? `${totalActiveOrders} Pengantaran Menunggu Saat Ini` : 'Belum Ada Pengantaran'}
             </div>
           </div>
 
-          {/* DAFTAR RIDER */}
           <div>
             <div className="flex justify-between items-end mb-3">
               <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">DAFTAR RIDER LAPANGAN</h3>
@@ -217,16 +235,14 @@ export default function Courier() {
                 <p className="text-sm text-center text-red-500 py-4">Tidak ada kurir aktif. Hubungi Admin.</p>
               ) : (
                 couriers.map((c) => {
-                  // Status Online/Offline (bisa disesuaikan logic-nya nanti)
                   const isOnline = c.is_active; 
                   
                   return (
                     <div 
                       key={c.id} 
                       onClick={() => {
-                        if (!isOnline) return; // Gak bisa diklik kalau offline
-                        localStorage.setItem('courier_session_id', c.id);
-                        setCurrentCourier(c);
+                        if (!isOnline) return;
+                        handleOpenPin(c);
                       }}
                       className={`bg-white rounded-2xl p-4 border transition-all ${
                         isOnline 
@@ -237,7 +253,6 @@ export default function Courier() {
                       {isOnline && <div className="absolute left-0 top-0 bottom-0 w-1 bg-orange-400"></div>}
 
                       <div className="flex gap-3">
-                        {/* FOTO & STATUS */}
                         <div className="relative shrink-0">
                           <img 
                             src={c.photo_url || `https://ui-avatars.com/api/?name=${c.name}&background=F59E0B&color=fff`} 
@@ -247,45 +262,38 @@ export default function Courier() {
                           <div className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white ${isOnline ? 'bg-green-500' : 'bg-gray-400'}`}></div>
                         </div>
 
-                        {/* INFO KURIR */}
                         <div className="flex-1">
                           <div className="flex justify-between items-start">
                             <div>
                               <div className="flex items-center gap-1.5">
                                 <h4 className="font-bold text-sm text-gray-800">{c.name}</h4>
-                                <span className="text-[10px] text-gray-500 flex items-center gap-0.5"><span className="text-yellow-400">⭐</span> 4.9</span>
                               </div>
                               <p className="text-[10px] text-gray-500 mt-0.5 font-mono flex items-center gap-1">
                                 <Bike size={10}/> {c.vehicle_type || 'Motor'} • {c.plate_number}
                               </p>
                             </div>
                             
-                            {/* TOMBOL MASUK */}
                             <div className={`flex items-center gap-1 text-[10px] font-bold ${isOnline ? 'text-orange-500' : 'text-gray-400'}`}>
                               {isOnline ? 'Masuk' : 'Buka'} <ArrowLeft size={12} className="rotate-180"/>
                             </div>
                           </div>
 
-                          {/* STATISTIK BAWAH */}
                           <div className="flex items-center gap-2 mt-2">
                             {isOnline ? (
                               <>
-                                {/* TAMBAHAN: Cek kalau ada tugas, baru tampilin. Kalau 0, hilang. */}
-                                {courierTasks[c.id] > 0 ? (
+                                {loginStats[c.id]?.active > 0 ? (
                                   <span className="bg-orange-500 text-white text-[9px] font-bold px-2 py-1 rounded-md flex items-center gap-1">
-                                    <Package size={10} /> {courierTasks[c.id]} Tugas Antar
+                                    <Package size={10} /> {loginStats[c.id].active} Tugas Antar
                                   </span>
                                 ) : (
                                   <span className="bg-green-100 text-green-700 text-[9px] font-bold px-2 py-1 rounded-md flex items-center gap-1">
                                     Standby (Siap Antar)
                                   </span>
                                 )}
-                                <span className="text-[9px] text-gray-500 font-medium">10 Antaran Selesai</span>
+                                <span className="text-[9px] text-gray-500 font-medium">{loginStats[c.id]?.done || 0} Antaran Selesai</span>
                               </>
                             ) : (
-                              <>
-                                <span className="bg-gray-100 text-gray-500 text-[9px] font-bold px-2 py-1 rounded-md">Ishirahat / Off</span>
-                              </>
+                              <span className="bg-gray-100 text-gray-500 text-[9px] font-bold px-2 py-1 rounded-md">Ishirahat / Off</span>
                             )}
                           </div>
                         </div>
@@ -296,36 +304,48 @@ export default function Courier() {
               )}
             </div>
           </div>
+        </div>
 
-          {/* KARTU PROSEDUR */}
-          <div className="bg-[#FEF3C7] border border-yellow-200 rounded-2xl p-4 flex gap-3 items-start mt-6">
-            <div className="bg-orange-500 p-1.5 rounded-lg text-white shrink-0 mt-0.5">
-              <ShieldCheck size={16} />
-            </div>
-            <div>
-              <p className="text-xs font-bold text-gray-800">Prosedur Pengantaran Bananta:</p>
-              <p className="text-[10px] text-gray-600 mt-1 leading-relaxed">
-                Nyalakan GPS Anda. Foto bukti penerimaan makanan di tempat pelanggan saat status pesanan diselesaikan.
-              </p>
-            </div>
+        {isPinModalOpen && selectedCourierForLogin && (
+          <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
+            <form onSubmit={handleVerifyPin} className="bg-white p-6 rounded-3xl w-full max-w-sm space-y-5 shadow-2xl animate-fade-in-up">
+              <div className="text-center">
+                <div className="w-16 h-16 bg-orange-100 text-orange-500 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <Lock size={32} />
+                </div>
+                <h2 className="font-bold text-xl">Halo, {selectedCourierForLogin.name}</h2>
+                <p className="text-xs text-gray-500 mt-1">Masukkan PIN rahasia Anda untuk melanjutkan.</p>
+              </div>
+              
+              <div>
+                <input 
+                  type="password" 
+                  maxLength={4}
+                  value={pinInput}
+                  onChange={(e) => setPinInput(e.target.value.replace(/\D/g, ''))}
+                  placeholder="••••"
+                  className="w-full bg-gray-50 border-2 border-gray-200 p-4 rounded-xl text-center text-3xl tracking-[1em] font-bold text-gray-800 focus:border-orange-500 focus:ring-4 focus:ring-orange-500/20 outline-none transition-all"
+                  required
+                  autoFocus
+                />
+              </div>
+              
+              <div className="flex gap-2 pt-2">
+                <button type="button" onClick={() => setIsPinModalOpen(false)} className="flex-1 bg-gray-100 py-3 rounded-xl font-bold text-sm text-gray-600 hover:bg-gray-200 transition-colors">Batal</button>
+                <button type="submit" className="flex-[2] bg-[#F97316] text-white py-3 rounded-xl font-bold text-sm hover:bg-[#EA580C] transition-colors shadow-md flex items-center justify-center gap-2">
+                  <ShieldCheck size={18} /> Verifikasi PIN
+                </button>
+              </div>
+            </form>
           </div>
-        </div>
-
-        {/* FOOTER BANTUAN */}
-        <div className="text-center pb-6">
-          <p className="text-[10px] text-gray-500 flex items-center justify-center gap-1">
-            <HelpCircle size={12} /> Butuh Bantuan? Hubungi Admin / Kasir Resto
-          </p>
-          <p className="text-[9px] text-gray-400 mt-1">Bananta Sultan Delivery System • v1.4.0 • Lelilef Waebulen</p>
-        </div>
+        )}
       </div>
     );
   }
 
-  // --- LAYAR 3: DASHBOARD KURIR (UDAH LOGIN) ---
+  // --- LAYAR 2: DASHBOARD KURIR ---
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
-      {/* HEADER ATAS */}
       <header className="bg-white p-4 shadow-sm flex justify-between items-center sticky top-0 z-10 border-b border-gray-100">
         <div className="flex items-center gap-3">
           <img src={currentCourier.photo_url || `https://ui-avatars.com/api/?name=${currentCourier.name}&background=F59E0B&color=fff`} alt="Profile" className="w-10 h-10 rounded-full border-2 border-orange-100 object-cover" />
@@ -340,141 +360,106 @@ export default function Courier() {
       </header>
 
       <div className="p-4 space-y-4 max-w-3xl mx-auto">
-        
-        {/* KARTU STATISTIK */}
         <div className="grid grid-cols-2 gap-3">
           <div className="bg-gradient-to-br from-[#F97316] to-[#EA580C] text-white p-4 rounded-2xl shadow-lg relative overflow-hidden">
             <div className="relative z-10">
-              <p className="text-[10px] font-bold tracking-wider opacity-90">PESANAN AKTIF</p>
-              <h2 className="text-3xl font-bold mt-1 mb-2">{orders.length}</h2>
-              <p className="text-[10px] bg-white/20 inline-flex items-center gap-1 px-2 py-1 rounded-full"><ClipboardList size={10}/> Perlu diantar</p>
+              <p className="text-[10px] font-bold tracking-wider opacity-90">PESANAN TERSEDIA</p>
+              <h2 className="text-3xl font-bold mt-1 mb-2">{orders.filter(o => !o.courier_id).length}</h2>
+              <p className="text-[10px] bg-white/20 inline-flex items-center gap-1 px-2 py-1 rounded-full"><ClipboardList size={10}/> Siap Diambil</p>
             </div>
             <Package className="absolute -bottom-4 -right-2 text-white opacity-20 transform rotate-12" size={90} />
           </div>
           
           <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 relative overflow-hidden">
             <div className="relative z-10">
-              <p className="text-[10px] font-bold tracking-wider text-gray-500">TOTAL SELESAI</p>
-              <h2 className="text-3xl font-bold mt-1 mb-2 text-gray-800">{historyOrders.length}</h2>
-              <p className="text-[10px] text-green-600 font-bold flex items-center gap-1"><TrendingUp size={12}/> Pengiriman sukses</p>
+              <p className="text-[10px] font-bold tracking-wider text-gray-500">TUGAS SAYA</p>
+              <h2 className="text-3xl font-bold mt-1 mb-2 text-gray-800">{orders.filter(o => o.courier_id === currentCourier.id).length}</h2>
+              <p className="text-[10px] text-green-600 font-bold flex items-center gap-1"><TrendingUp size={12}/> Sedang Diantar</p>
             </div>
             <CheckCircle className="absolute -bottom-4 -right-2 text-green-500 opacity-10" size={90} />
           </div>
         </div>
 
-        {/* TABS */}
         <div className="bg-gray-100 p-1 rounded-xl flex">
-          <button 
-            onClick={() => setActiveTab('aktif')}
-            className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${activeTab === 'aktif' ? 'bg-white text-orange-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-          >
-            Tugas Aktif
-          </button>
-          <button 
-            onClick={() => setActiveTab('riwayat')}
-            className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${activeTab === 'riwayat' ? 'bg-white text-orange-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-          >
-            Riwayat Tugas
-          </button>
+          <button onClick={() => setActiveTab('aktif')} className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${activeTab === 'aktif' ? 'bg-white text-orange-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>Daftar Tugas</button>
+          <button onClick={() => setActiveTab('riwayat')} className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${activeTab === 'riwayat' ? 'bg-white text-orange-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>Riwayat Tugas</button>
         </div>
 
-        {/* SEARCH BAR */}
-        <div className="flex gap-2">
-          <div className="flex-1 bg-white border border-gray-200 rounded-xl flex items-center px-3 py-2 shadow-sm">
-            <Search size={16} className="text-gray-400" />
-            <input 
-              type="text" 
-              placeholder="Cari nama penerima..." 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-transparent border-none text-xs focus:ring-0 outline-none ml-2"
-            />
-          </div>
-        </div>
-
-        {/* LIST BERDASARKAN TAB */}
         {activeTab === 'aktif' ? (
           <div>
-            <div className="flex justify-between items-end mb-3 mt-4">
-              <h2 className="font-bold text-sm text-gray-800">Tugas Pengantaran</h2>
-              <span className="bg-orange-100 text-orange-600 text-[10px] font-bold px-2 py-1 rounded-full">{filteredActive.length} Pesanan</span>
-            </div>
-
             {loading ? (
               <p className="text-center text-gray-500 text-sm py-4">Memuat tugas...</p>
-            ) : filteredActive.length === 0 ? (
+            ) : orders.length === 0 ? (
               <div className="bg-white rounded-2xl p-8 text-center border border-gray-100 shadow-sm">
                 <Package className="mx-auto text-gray-300 mb-2" size={40} />
-                <p className="text-gray-500 text-sm font-medium">Tidak ada tugas aktif untukmu saat ini.</p>
+                <p className="text-gray-500 text-sm font-medium">Belum ada tugas saat ini.</p>
               </div>
             ) : (
               <div className="space-y-3">
-                {filteredActive.map((order) => (
-                  <div key={order.id} className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
-                    <div className="flex justify-between items-center mb-3">
-                      <div className="flex items-center gap-1.5 text-gray-600 bg-gray-50 px-2 py-1 rounded-md text-[10px] font-bold border border-gray-100">
-                        <ClipboardList size={12}/> #{order.id.slice(0, 6)}
-                      </div>
-                      <span className="px-2 py-1 rounded-full text-[10px] font-bold bg-blue-50 text-blue-600 flex items-center gap-1 border border-blue-100">
-                        <Bike size={10}/> Sedang Diantar
-                      </span>
-                    </div>
+                {orders.map((order) => {
+                  const isMine = order.courier_id === currentCourier.id;
 
-                    <div className="space-y-3 mb-4">
-                      <div className="flex items-start gap-2">
-                        <User size={14} className="text-orange-500 mt-0.5 shrink-0" />
+                  return (
+                    <div key={order.id} className={`p-4 rounded-2xl shadow-sm border ${isMine ? 'bg-orange-50 border-orange-200' : 'bg-white border-gray-100'}`}>
+                      <div className="flex justify-between items-center mb-3">
+                        <div className="flex items-center gap-1.5 text-gray-600 bg-white/50 px-2 py-1 rounded-md text-[10px] font-bold border border-gray-100">
+                          <ClipboardList size={12}/> #{order.id.slice(0, 6)}
+                        </div>
+                        <span className={`px-2 py-1 rounded-full text-[10px] font-bold flex items-center gap-1 border ${isMine ? 'bg-orange-500 text-white border-orange-600' : 'bg-blue-50 text-blue-600 border-blue-100'}`}>
+                          {isMine ? <><Bike size={10}/> Tugas Anda</> : 'Tersedia'}
+                        </span>
+                      </div>
+
+                      <div className="space-y-3 mb-4">
+                        <div className="flex items-start gap-2">
+                          <User size={14} className="text-orange-500 mt-0.5 shrink-0" />
+                          <div>
+                            <p className="text-[10px] text-gray-400">Penerima</p>
+                            <span className="font-bold text-sm text-gray-800">{order.customer_name}</span>
+                          </div>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <MapPin size={14} className="text-orange-500 mt-0.5 shrink-0" />
+                          <div className="flex-1">
+                            <p className="text-[10px] text-gray-400">Tujuan Antar</p>
+                            <span className="text-xs text-gray-700 font-medium">{order.address}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="border-t border-gray-200/50 pt-3 flex justify-between items-center gap-3">
                         <div>
-                          <p className="text-[10px] text-gray-400">Penerima</p>
-                          <span className="font-bold text-sm text-gray-800">{order.customer_name}</span>
+                          <p className="text-[10px] font-bold text-gray-400 uppercase">Total</p>
+                          <p className="text-base font-bold text-orange-500">Rp {order.total_price.toLocaleString('id-ID')}</p>
                         </div>
-                      </div>
-                      <div className="flex items-start gap-2">
-                        <MapPin size={14} className="text-orange-500 mt-0.5 shrink-0" />
-                        <div className="flex-1">
-                          <p className="text-[10px] text-gray-400">Tujuan Antar</p>
-                          <span className="text-xs text-gray-700 font-medium">{order.address}</span>
-                        </div>
-                        <button className="text-[10px] text-blue-500 border border-blue-200 px-2 py-1 rounded bg-blue-50 flex items-center gap-1">🗺️ Maps</button>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Phone size={14} className="text-orange-500 shrink-0" />
-                        <div className="flex-1">
-                          <p className="text-[10px] text-gray-400">Telepon / WhatsApp</p>
-                          <a href={`tel:${order.phone}`} className="text-xs text-blue-600 font-bold">{order.phone}</a>
-                        </div>
-                        <a href={`https://wa.me/${order.phone}`} target="_blank" rel="noreferrer" className="text-[10px] text-green-600 border border-green-200 px-2 py-1 rounded bg-green-50 flex items-center gap-1">💬 Chat</a>
+                        
+                        {isMine ? (
+                          <button onClick={() => setSelectedOrder(order)} className="bg-[#F97316] text-white text-xs px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 hover:bg-[#EA580C] transition-colors shadow-md">
+                            <CheckCircle size={16}/> Selesai & Bukti
+                          </button>
+                        ) : (
+                          <button onClick={() => handleTakeTask(order.id)} className="bg-blue-600 text-white text-xs px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 hover:bg-blue-700 transition-colors shadow-md">
+                            <Bike size={16}/> Ambil Tugas
+                          </button>
+                        )}
                       </div>
                     </div>
-
-                    <div className="border-t border-gray-100 pt-3 flex flex-col sm:flex-row justify-between sm:items-center gap-3">
-                      <div>
-                        <p className="text-[10px] font-bold text-gray-400 uppercase">Total Tagihan</p>
-                        <p className="text-base font-bold text-orange-500">Rp {order.total_price.toLocaleString('id-ID')}</p>
-                      </div>
-                      <button 
-                        onClick={() => setSelectedOrder(order)} 
-                        className="bg-[#F97316] text-white text-xs px-5 py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-[#EA580C] transition-colors shadow-md w-full sm:w-auto"
-                      >
-                        <CheckCircle size={16}/> Selesai & Bukti
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
         ) : (
           <div className="mt-4">
             <h2 className="font-bold text-sm text-gray-800 mb-3">Riwayat Pengantaran</h2>
-            
-            {filteredHistory.length === 0 ? (
+            {historyOrders.length === 0 ? (
               <div className="bg-white rounded-2xl p-8 text-center border border-gray-100 shadow-sm">
                 <History className="mx-auto text-gray-300 mb-2" size={40} />
                 <p className="text-gray-500 text-sm font-medium">Belum ada riwayat.</p>
               </div>
             ) : (
               <div className="space-y-3">
-                {filteredHistory.map((order) => (
+                {historyOrders.map((order) => (
                   <div key={order.id} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
                     <div className="flex justify-between items-start">
                       <div>
@@ -497,7 +482,6 @@ export default function Courier() {
         )}
       </div>
 
-      {/* MODAL UPLOAD BUKTI */}
       {selectedOrder && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
           <form onSubmit={handleFinishOrder} className="bg-white p-6 rounded-2xl w-full max-w-sm space-y-4 shadow-2xl">
@@ -506,7 +490,6 @@ export default function Courier() {
                 <CheckCircle size={24} />
               </div>
               <h2 className="font-bold text-lg">Konfirmasi Selesai</h2>
-              <p className="text-xs text-gray-500 mt-1">Upload foto barang yang sudah diterima pelanggan.</p>
             </div>
             
             <div>
