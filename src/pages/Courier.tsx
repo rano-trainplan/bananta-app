@@ -4,7 +4,7 @@ import toast from 'react-hot-toast';
 import { Link } from 'react-router-dom';
 import { 
   CheckCircle, MapPin, Package, User, Bike, ClipboardList, 
-  TrendingUp, History, LogOut, ShieldCheck, Store, HelpCircle, ArrowLeft, Lock
+  TrendingUp, History, LogOut, ShieldCheck, Store, ArrowLeft, Lock
 } from 'lucide-react';
 
 export default function Courier() {
