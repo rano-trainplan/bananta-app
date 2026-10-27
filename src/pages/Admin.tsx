@@ -1,8 +1,8 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
 import {
-  Eye, Volume2, X, Calendar, Filter, Store, CheckCircle,
+  Eye,  X, Calendar, Filter, Store, CheckCircle,
   XCircle, Clock, Truck, MapPin, Phone, ArrowLeft,
   User, CreditCard, Check
 } from 'lucide-react';
@@ -15,7 +15,7 @@ export default function Admin() {
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [modalType, setModalType] = useState<'detail' | 'proof' | 'courier' | null>(null);
-  const lastAnnouncedId = useRef<string | null>(null);
+  
 
   const [selectedCourierId, setSelectedCourierId] = useState('');
 
@@ -24,45 +24,10 @@ export default function Admin() {
   const [endDate, setEndDate] = useState(today);
   const [filterStatus, setFilterStatus] = useState('Semua');
 
-  // FUNGSI SUARA
-  const speakOrder = (order: any) => {
-    const audio = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
-    audio.play().catch(e => console.log(e));
-
-    if (!('speechSynthesis' in window)) return;
-    const itemsText = order.order_items?.map((i: any) => `${i.product_name} ${i.quantity} porsi`).join(', ') || 'makanan';
-    const deliveryText = order.delivery_type === 'Ambil di Toko' ? 'Ambil di Toko' : `Diantar ke ${order.address}`;
-    const text = `Pesanan baru atas nama ${order.customer_name}. Pesanan: ${itemsText}. ${deliveryText}. Total pembayaran ${order.total_price.toLocaleString('id-ID')} rupiah.`;
-
-    const speak = () => {
-      window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = 'id-ID'; utterance.rate = 0.9;
-      let count = 0;
-      utterance.onend = () => {
-        count++; if (count < 2) setTimeout(() => window.speechSynthesis.speak(utterance), 1000);
-      };
-      window.speechSynthesis.speak(utterance);
-    };
-    speak();
-  };
-
-  useEffect(() => {
+ 
+    useEffect(() => {
     fetchOrders();
     fetchCouriers();
-    
-    const channel = supabase.channel('admin-orders')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, async (payload) => {
-        const newOrder = payload.new;
-        const { data: items } = await supabase.from('order_items').select('*').eq('order_id', newOrder.id);
-        const fullOrder = { ...newOrder, order_items: items };
-        if (lastAnnouncedId.current !== newOrder.id) {
-          speakOrder(fullOrder);
-          lastAnnouncedId.current = newOrder.id;
-        }
-        fetchOrders();
-      }).subscribe();
-    return () => { supabase.removeChannel(channel); };
   }, [startDate, endDate]);
 
   async function fetchOrders() {
@@ -172,9 +137,7 @@ export default function Admin() {
           <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="bg-transparent text-sm font-semibold text-gray-700 outline-none w-32" />
         </div>
 
-        <button onClick={() => orders.length > 0 && speakOrder(orders[0])} className="w-full md:w-auto bg-gray-900 text-white px-5 py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 shadow-lg hover:bg-black transition-colors">
-          <Volume2 size={16} /> Tes Suara Notifikasi <span className="text-[10px] bg-white/20 px-1.5 py-0.5 rounded">Beta</span>
-        </button>
+        
       </div>
 
       {/* TABS */}

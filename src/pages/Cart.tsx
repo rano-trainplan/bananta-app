@@ -22,8 +22,6 @@ export default function Cart() {
   const [shippingRates, setShippingRates] = useState<any[]>([]);
   const [selectedArea, setSelectedArea] = useState('');
   const [shippingCost, setShippingCost] = useState(0);
-  const [discountCode, setDiscountCode] = useState('');
-  const [discountAmount, setDiscountAmount] = useState(0);
   const [storeSettings, setStoreSettings] = useState<any>(null);
   const [copied, setCopied] = useState<string | null>(null);
 
@@ -62,28 +60,15 @@ export default function Cart() {
 
   const handleRemovePhoto = () => { setBuktiTransfer(null); setPreviewUrl(null); };
 
-  const handleApplyDiscount = async () => {
-    if (!discountCode) return;
-    const today = new Date().getDay();
-    if (discountCode.toUpperCase() === 'JUMATBERKAH' && today !== 5) return toast.error("Promo Jumat Berkah hanya berlaku di hari Jumat!");
-    const { data, error } = await supabase.from('discounts').select('*').eq('code', discountCode.toUpperCase()).eq('is_active', true).single();
-    if (error || !data) return toast.error("Kode diskon tidak valid.");
-    if (cartTotal < data.min_purchase) return toast.error(`Minimal belanja Rp ${data.min_purchase.toLocaleString('id-ID')}`);
-    setDiscountAmount(data.discount_amount);
-    toast.success(`Diskon ${data.title} berhasil!`);
-  };
-
   const isPickup = deliveryType === 'Ambil di Toko';
   const finalShipping = isPickup ? 0 : shippingCost;
-  const grandTotal = cartTotal + finalShipping - discountAmount;
-  const isCourierTooCheap = !isPickup && cartTotal < 100000;
+  const grandTotal = cartTotal + finalShipping; // Promo dihapus
 
   const handleCheckout = async (e: React.FormEvent) => {
     e.preventDefault();
     if (cart.length === 0) return alert("Keranjang masih kosong!");
     if (!nama || !noHp) return alert("Harap isi nama dan no HP!");
     if (!isPickup && !alamat) return alert("Harap isi alamat pengiriman!");
-    if (isCourierTooCheap) return alert("Minimum order untuk Kurir adalah Rp 100.000!");
     if (!buktiTransfer) return alert("Harap upload bukti pembayaran!");
     if (isPickup && !pickupTime) return alert("Harap pilih jadwal pengambilan!");
 
@@ -98,7 +83,6 @@ export default function Cart() {
       const { data: urlData } = supabase.storage.from('uploads').getPublicUrl(fileName);
       proofUrl = urlData.publicUrl;
 
-      // 1. Simpan Pesanan
       const { data: orderData, error: orderError } = await supabase
         .from('orders')
         .insert([{
@@ -118,7 +102,6 @@ export default function Cart() {
 
       if (orderError) throw orderError;
 
-      // 2. Simpan Item Pesanan
       const itemsToInsert = cart.map(item => ({
         order_id: orderData.id,
         product_name: item.name,
@@ -127,14 +110,12 @@ export default function Cart() {
       }));
       await supabase.from('order_items').insert(itemsToInsert);
 
-      // 3. KURANGI STOK PRODUK OTOMATIS
+      // KURANGI STOK PRODUK OTOMATIS
       for (const item of cart) {
         const { data: productData } = await supabase.from('products').select('stock').eq('id', item.id).single();
-        
         if (productData) {
           const currentStock = productData.stock || 0;
-          const newStock = Math.max(0, currentStock - item.quantity); // Pastikan gak minus
-          
+          const newStock = Math.max(0, currentStock - item.quantity);
           await supabase.from('products').update({ stock: newStock }).eq('id', item.id);
         }
       }
@@ -142,7 +123,6 @@ export default function Cart() {
       toast.success("Pesanan berhasil dibuat!");
       cart.forEach(item => removeFromCart(item.id));
       
-      // Simpan ID pesanan ke HP pelanggan
       const existingOrders = JSON.parse(localStorage.getItem('my_orders') || '[]');
       localStorage.setItem('my_orders', JSON.stringify([...existingOrders, orderData.id]));
 
@@ -164,8 +144,6 @@ export default function Cart() {
       </header>
 
       <div className="p-4 space-y-6">
-        
-        {/* JIKA KERANJANG KOSONG */}
         {cart.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
             <div className="bg-orange-100 p-6 rounded-full mb-4">
@@ -173,17 +151,12 @@ export default function Cart() {
             </div>
             <h2 className="text-xl font-bold text-gray-800 mb-2">Keranjang Masih Kosong</h2>
             <p className="text-sm text-gray-500 mb-6">Kamu belum memilih menu apapun. Yuk, pesan makanan atau minuman favoritmu dulu!</p>
-            <button 
-              onClick={() => navigate('/')} 
-              className="bg-[#F59E0B] text-white px-6 py-3 rounded-xl font-bold text-sm shadow-md hover:bg-[#D97706] transition-colors"
-            >
+            <button onClick={() => navigate('/')} className="bg-[#F59E0B] text-white px-6 py-3 rounded-xl font-bold text-sm shadow-md hover:bg-[#D97706] transition-colors">
               Lihat Menu Sekarang
             </button>
           </div>
         ) : (
-          
           <>
-            {/* LIST ITEM */}
             <div className="space-y-3">
               {cart.map((item) => (
                 <div key={item.id} className="bg-white p-3 rounded-xl shadow-sm border border-gray-100 flex gap-3 items-center">
@@ -203,31 +176,13 @@ export default function Cart() {
             </div>
 
             <form onSubmit={handleCheckout} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 space-y-4">
-              
-              {/* INFORMASI PENGIRIMAN */}
               <h3 className="font-bold text-md border-b pb-2">Informasi Pengiriman</h3>
               
               <div className="grid grid-cols-2 gap-3">
-                <button 
-                  type="button" 
-                  onClick={() => setDeliveryType('Ambil di Toko')} 
-                  className={`flex items-center justify-center gap-2 py-3 text-sm font-bold rounded-xl border-2 transition-all ${
-                    isPickup 
-                      ? 'bg-[#F59E0B] text-white border-[#F59E0B] shadow-md' 
-                      : 'bg-white text-gray-500 border-gray-200'
-                  }`}
-                >
+                <button type="button" onClick={() => setDeliveryType('Ambil di Toko')} className={`flex items-center justify-center gap-2 py-3 text-sm font-bold rounded-xl border-2 transition-all ${isPickup ? 'bg-[#F59E0B] text-white border-[#F59E0B] shadow-md' : 'bg-white text-gray-500 border-gray-200'}`}>
                   <Store size={18}/> Ambil di Toko
                 </button>
-                <button 
-                  type="button" 
-                  onClick={() => setDeliveryType('Diantar Kurir')} 
-                  className={`flex items-center justify-center gap-2 py-3 text-sm font-bold rounded-xl border-2 transition-all ${
-                    !isPickup 
-                      ? 'bg-[#F59E0B] text-white border-[#F59E0B] shadow-md' 
-                      : 'bg-white text-gray-500 border-gray-200'
-                  }`}
-                >
+                <button type="button" onClick={() => setDeliveryType('Diantar Kurir')} className={`flex items-center justify-center gap-2 py-3 text-sm font-bold rounded-xl border-2 transition-all ${!isPickup ? 'bg-[#F59E0B] text-white border-[#F59E0B] shadow-md' : 'bg-white text-gray-500 border-gray-200'}`}>
                   <Bike size={18}/> Diantar Kurir
                 </button>
               </div>
@@ -258,29 +213,15 @@ export default function Cart() {
                       {shippingRates.map(area => (<option key={area.id} value={area.id}>{area.area_name} - Rp {area.cost.toLocaleString('id-ID')}</option>))}
                     </select>
                   </div>
-                  {isCourierTooCheap && <p className="text-xs text-red-500 font-bold">Minimum order Rp 100.000 untuk Kurir!</p>}
                 </>
               )}
 
-              {/* METODE PEMBAYARAN */}
               <h3 className="font-bold text-md border-b pb-2 pt-2">Metode Pembayaran</h3>
               <div className="flex gap-2">
-                <button 
-                  type="button" 
-                  onClick={() => setMetode('QRIS')} 
-                  className={`flex-1 py-2.5 text-sm font-bold rounded-xl border-2 transition-all ${
-                    metode === 'QRIS' ? 'bg-[#F59E0B] text-white border-[#F59E0B] shadow-md' : 'bg-white text-gray-500 border-gray-200'
-                  }`}
-                >
+                <button type="button" onClick={() => setMetode('QRIS')} className={`flex-1 py-2.5 text-sm font-bold rounded-xl border-2 transition-all ${metode === 'QRIS' ? 'bg-[#F59E0B] text-white border-[#F59E0B] shadow-md' : 'bg-white text-gray-500 border-gray-200'}`}>
                   QRIS
                 </button>
-                <button 
-                  type="button" 
-                  onClick={() => setMetode('Transfer Bank')} 
-                  className={`flex-1 py-2.5 text-sm font-bold rounded-xl border-2 transition-all ${
-                    metode === 'Transfer Bank' ? 'bg-[#F59E0B] text-white border-[#F59E0B] shadow-md' : 'bg-white text-gray-500 border-gray-200'
-                  }`}
-                >
+                <button type="button" onClick={() => setMetode('Transfer Bank')} className={`flex-1 py-2.5 text-sm font-bold rounded-xl border-2 transition-all ${metode === 'Transfer Bank' ? 'bg-[#F59E0B] text-white border-[#F59E0B] shadow-md' : 'bg-white text-gray-500 border-gray-200'}`}>
                   Transfer
                 </button>
               </div>
@@ -314,16 +255,10 @@ export default function Cart() {
                       <p className="text-xs opacity-80 mt-1">a.n. {storeSettings.bank_owner_2}</p>
                     </div>
                   )}
-
                   <p className="text-center text-sm text-gray-500">Klik kartu buat copy No. Rek</p>
-                  <div className="bg-gray-50 p-3 rounded-lg text-center border">
-                    <p className="text-sm font-bold text-gray-600">Total Transfer:</p>
-                    <p className="text-xl font-bold text-[#F59E0B]">Rp {grandTotal.toLocaleString('id-ID')}</p>
-                  </div>
                 </div>
               )}
 
-              {/* UPLOAD BUKTI */}
               <div>
                 <label className="text-xs text-red-500 mb-1 block font-bold">Upload Bukti (Wajib)</label>
                 {!previewUrl ? (
@@ -340,15 +275,9 @@ export default function Cart() {
                 )}
               </div>
 
-              <div className="flex gap-2">
-                <input type="text" placeholder="Kode Promo (JUMATBERKAH)" value={discountCode} onChange={e => setDiscountCode(e.target.value)} className="flex-1 bg-gray-50 border p-2 rounded-lg text-sm" />
-                <button type="button" onClick={handleApplyDiscount} className="bg-gray-800 text-white px-4 rounded-lg text-sm font-bold">Pakai</button>
-              </div>
-
               <div className="border-t pt-3 mt-3 space-y-1 text-sm text-gray-600">
                 <div className="flex justify-between"><span>Subtotal</span><span>Rp {cartTotal.toLocaleString('id-ID')}</span></div>
                 {!isPickup && <div className="flex justify-between"><span>Ongkir</span><span>Rp {finalShipping.toLocaleString('id-ID')}</span></div>}
-                {discountAmount > 0 && <div className="flex justify-between text-green-600 font-bold"><span>Diskon</span><span>- Rp {discountAmount.toLocaleString('id-ID')}</span></div>}
                 <div className="flex justify-between font-bold text-lg text-[#F59E0B] mt-2"><span>Total</span><span>Rp {grandTotal.toLocaleString('id-ID')}</span></div>
               </div>
             </form>
@@ -356,20 +285,19 @@ export default function Cart() {
         )}
       </div>
 
-      {/* TOMBOL BAYAR STICKY DI BAWAH LAYAR */}
       {cart.length > 0 && (
         <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white border-t border-gray-200 p-4 z-[60] shadow-[0_-4px_20px_rgba(0,0,0,0.1)] pb-6">
           <button 
             type="button"
             onClick={(e) => handleCheckout(e as any)}
-            disabled={isLoading || !buktiTransfer || isCourierTooCheap}
+            disabled={isLoading || !buktiTransfer}
             className={`w-full py-3.5 rounded-xl font-bold text-base transition-all ${
-              (!buktiTransfer || isCourierTooCheap || isLoading) 
+              (!buktiTransfer || isLoading) 
                 ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
                 : 'bg-[#F59E0B] text-white shadow-lg hover:bg-[#D97706]'
             }`}
           >
-            {isLoading ? 'Memproses...' : isCourierTooCheap ? 'Min. Order 100rb' : !buktiTransfer ? 'Upload Bukti Dulu' : 'Pesan Sekarang'}
+            {isLoading ? 'Memproses...' : !buktiTransfer ? 'Upload Bukti Dulu' : 'Pesan Sekarang'}
           </button>
         </div>
       )}
