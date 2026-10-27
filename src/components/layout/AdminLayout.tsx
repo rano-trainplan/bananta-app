@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Menu, X, LayoutDashboard, Store, Bike, LogOut, ArrowLeft, ClipboardList, ShoppingCart, BarChart3, Settings } from 'lucide-react';
+import { Menu, X, LayoutDashboard, Store, Bike, LogOut, ArrowLeft, ClipboardList, ShoppingCart, BarChart3, } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
-import toast from 'react-hot-toast';
+
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
