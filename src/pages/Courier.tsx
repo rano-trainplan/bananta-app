@@ -89,9 +89,24 @@ export default function Courier() {
     return () => { supabase.removeChannel(channel); };
   }, [currentCourier, startDate, endDate]);
 
-  const playNotificationSound = () => {
+    const playNotificationSound = () => {
+    // Suara beep lebih keras
     const audio = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
-    audio.play().catch(e => console.log('Audio block by browser', e));
+    
+    // Bunyiin 3 kali (jeda 1 detik)
+    audio.play().catch(e => console.log(e));
+    setTimeout(() => { audio.currentTime = 0; audio.play().catch(e => console.log(e)); }, 1000);
+    setTimeout(() => { audio.currentTime = 0; audio.play().catch(e => console.log(e)); }, 2000);
+
+    // Tambah suara TTS (Text to Speech) "Pesanan Baru"
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance("Pesanan baru siap diantar!");
+      utterance.lang = 'id-ID';
+      utterance.rate = 1.0;
+      // Munculin suara TTS setelah beep ke-2
+      setTimeout(() => window.speechSynthesis.speak(utterance), 1500);
+    }
   };
 
   async function fetchData() {
@@ -118,10 +133,9 @@ export default function Courier() {
       
     setHistoryOrders(history || []);
 
-    // LOGIKA PENDAPATAN (Misal: Rp 5.000 per antar)
-    const komisiPerTugas = 5000;
-    const income = (history || []).length * komisiPerTugas;
-    setTotalIncome(income);
+       // LOGIKA PENDAPATAN BARU (Ambil dari shipping_cost)
+    const totalIncome = (history || []).reduce((sum, order) => sum + (order.shipping_cost || 0), 0);
+    setTotalIncome(totalIncome);
 
     setLoading(false);
   }

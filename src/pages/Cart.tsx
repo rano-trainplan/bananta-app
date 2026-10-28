@@ -83,7 +83,7 @@ export default function Cart() {
       const { data: urlData } = supabase.storage.from('uploads').getPublicUrl(fileName);
       proofUrl = urlData.publicUrl;
 
-      const { data: orderData, error: orderError } = await supabase
+            const { data: orderData, error: orderError } = await supabase
         .from('orders')
         .insert([{
           customer_name: nama,
@@ -95,7 +95,8 @@ export default function Cart() {
           status: 'Dibuat',
           payment_proof: proofUrl,
           delivery_type: deliveryType,
-          pickup_time: pickupTime ? new Date(pickupTime).toISOString() : null
+          pickup_time: pickupTime ? new Date(pickupTime).toISOString() : null,
+          shipping_cost: finalShipping // <--- TAMBAHKAN INI
         }])
         .select()
         .single();
