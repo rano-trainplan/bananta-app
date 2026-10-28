@@ -219,20 +219,16 @@ export default function Cart() {
                 </div>
               )}
 
-              {metode === 'Transfer Bank' && storeSettings && (
-                <div className="space-y-3">
-                  <div onClick={() => handleCopy(storeSettings.bank_account, 'No. Rek ' + storeSettings.bank_name)} className="bg-gradient-to-r from-blue-600 to-blue-800 p-4 rounded-xl shadow-md text-white cursor-pointer relative overflow-hidden group">
-                    <div className="flex justify-between items-start mb-2">
-                      <p className="font-bold text-sm">{storeSettings.bank_name}</p>
-                      {copied === 'No. Rek ' + storeSettings.bank_name ? <Check size={16} /> : <Copy size={16} className="opacity-50 group-hover:opacity-100" />}
+                                {storeSettings.bank_name_2 && (
+                    <div onClick={() => handleCopy(storeSettings.bank_account_2, 'No. Rek ' + storeSettings.bank_name_2)} className="bg-gradient-to-r from-yellow-500 to-yellow-600 p-4 rounded-xl shadow-md text-white cursor-pointer relative overflow-hidden group">
+                      <div className="flex justify-between items-start mb-2">
+                        <p className="font-bold text-sm">{storeSettings.bank_name_2}</p>
+                        {copied === 'No. Rek ' + storeSettings.bank_name_2 ? <Check size={16} /> : <Copy size={16} className="opacity-50 group-hover:opacity-100" />}
+                      </div>
+                      <p className="text-lg font-mono tracking-widest">{storeSettings.bank_account_2}</p>
+                      <p className="text-xs opacity-80 mt-1">a.n. {storeSettings.bank_owner_2}</p>
                     </div>
-                    <p className="text-lg font-mono tracking-widest">{storeSettings.bank_account}</p>
-                    <p className="text-xs opacity-80 mt-1">a.n. {storeSettings.bank_owner}</p>
-                  </div>
-                  <p className="text-center text-sm text-gray-500">Klik kartu buat copy No. Rek</p>
-                </div>
-              )}
-
+                  )}
               <div>
                 <label className="text-xs text-red-500 mb-1 block font-bold">{t('upload_proof')}</label>
                 {!previewUrl ? (
