@@ -114,14 +114,20 @@ export default function Home() {
           className="rounded-2xl p-5 text-white mb-6 relative overflow-hidden shadow-lg"
           style={{ background: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)' }}
         >
-          {/* TOMBOL BAHASA DI POJOK KANAN ATAS */}
-          <div className="absolute top-4 right-4 z-20 flex gap-1 bg-black/20 p-1 rounded-lg backdrop-blur-sm">
-            <button onClick={() => setLanguage('id')} className={`text-sm px-1.5 py-0.5 rounded transition-colors ${language === 'id' ? 'bg-white shadow-sm' : 'hover:bg-white/20'}`}>🇮🇩</button>
-            <button onClick={() => setLanguage('en')} className={`text-sm px-1.5 py-0.5 rounded transition-colors ${language === 'en' ? 'bg-white shadow-sm' : 'hover:bg-white/20'}`}>🇬🇧</button>
-            <button onClick={() => setLanguage('zh')} className={`text-sm px-1.5 py-0.5 rounded transition-colors ${language === 'zh' ? 'bg-white shadow-sm' : 'hover:bg-white/20'}`}>🇨🇳</button>
+          {/* TOMBOL BAHASA DI POJOK KANAN ATAS (PAKAI GAMBAR BENDERA) */}
+          <div className="absolute top-4 right-4 z-20 flex gap-1.5 bg-black/20 p-1.5 rounded-lg backdrop-blur-sm items-center">
+            <button onClick={() => setLanguage('id')} className={`w-6 h-4 rounded overflow-hidden transition-transform ${language === 'id' ? 'ring-2 ring-white scale-110' : 'opacity-70 hover:opacity-100'}`}>
+              <img src="https://flagcdn.com/w40/id.png" alt="ID" className="w-full h-full object-cover" />
+            </button>
+            <button onClick={() => setLanguage('en')} className={`w-6 h-4 rounded overflow-hidden transition-transform ${language === 'en' ? 'ring-2 ring-white scale-110' : 'opacity-70 hover:opacity-100'}`}>
+              <img src="https://flagcdn.com/w40/gb.png" alt="EN" className="w-full h-full object-cover" />
+            </button>
+            <button onClick={() => setLanguage('zh')} className={`w-6 h-4 rounded overflow-hidden transition-transform ${language === 'zh' ? 'ring-2 ring-white scale-110' : 'opacity-70 hover:opacity-100'}`}>
+              <img src="https://flagcdn.com/w40/cn.png" alt="ZH" className="w-full h-full object-cover" />
+            </button>
           </div>
 
-          <div className="relative z-10 pr-16">
+          <div className="relative z-10 pr-24">
             {isFriday ? (
               <>
                 <h2 className="font-bold text-lg mb-1">{storeSettings?.promo_title_friday || t('promo_title_friday')}</h2>
