@@ -3,7 +3,7 @@ import Home from './pages/Home';
 import Cart from './pages/Cart';
 import Tracking from './pages/Tracking';
 import Admin from './pages/Admin';
-import AdminDashboard from './pages/AdminDashboard'; // <-- TAMBAHAN
+import AdminDashboard from './pages/AdminDashboard'; 
 import AdminShipping from './pages/AdminShipping';
 import AdminSettings from './pages/AdminSettings';
 import AdminSettingsHub from './pages/AdminSettingsHub';
@@ -13,9 +13,10 @@ import Courier from './pages/Courier';
 import History from './pages/History';
 import Profile from './pages/Profile';
 import { CartProvider } from './context/CartContext';
+import { LanguageProvider } from './context/LanguageContext'; // <-- IMPORT BARU
 import { Toaster } from 'react-hot-toast';
 import Pos from './pages/Pos';
-import AdminReports from './pages/AdminReports'; // <-- Tambah di atas
+import AdminReports from './pages/AdminReports'; 
 import Reupload from './pages/Reupload';
 import AdminSettingsSystem from './pages/AdminSettingsSystem';
 import Login from './pages/Login';
@@ -28,7 +29,7 @@ function AppContent() {
 
   return (
     <div className={isAdminPage ? "min-h-screen bg-gray-50" : "max-w-md mx-auto bg-white min-h-screen shadow-2xl relative"}>
-            <Routes>
+      <Routes>
         {/* PUBLIC ROUTES */}
         <Route path="/login" element={<Login />} />
         <Route path="/" element={<Home />} />
@@ -61,9 +62,11 @@ function AppContent() {
 function App() {
   return (
     <CartProvider>
-      <BrowserRouter>
-        <AppContent />
-      </BrowserRouter>
+      <LanguageProvider> {/* <-- BUNGKUS DISINI */}
+        <BrowserRouter>
+          <AppContent />
+        </BrowserRouter>
+      </LanguageProvider>
     </CartProvider>
   );
 }
