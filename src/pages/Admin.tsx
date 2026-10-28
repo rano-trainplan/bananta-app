@@ -67,11 +67,11 @@ export default function Admin() {
     toast.error("Minta upload ulang bukti TF."); setModalType(null); fetchOrders();
   };
 
-  const handleReleaseToCouriers = async (id: string) => {
+    const handleReleaseToCouriers = async (id: string) => {
     if (!confirm("Lepas pesanan ini ke semua kurir? (Siapa cepat, dia dapat)")) return;
     await supabase.from('orders').update({
       courier_id: null,
-      status: 'Dikirim'
+      status: 'Mencari Kurir' // <--- UBAH INI
     }).eq('id', id);
     toast.success("Pesanan dilepas ke kurir!"); 
     setModalType(null); 

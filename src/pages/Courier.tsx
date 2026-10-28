@@ -3,9 +3,8 @@ import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
 import { Link } from 'react-router-dom';
 import { 
-  CheckCircle, MapPin, Package, Bike, 
-  LogOut, ShieldCheck, Store, ArrowLeft, Lock, 
-  Power, Wallet
+  CheckCircle, MapPin, Package, Bike, LogOut, ShieldCheck, 
+  Store, ArrowLeft, Lock, Power, Wallet, Phone, X
 } from 'lucide-react';
 import AnimatedNumber from '../components/ui/AnimatedNumber';
 
@@ -13,6 +12,7 @@ export default function Courier() {
   const [orders, setOrders] = useState<any[]>([]);
   const [historyOrders, setHistoryOrders] = useState<any[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
+  const [detailOrder, setDetailOrder] = useState<any>(null); // State buat Modal Detail
   const [proofPhoto, setProofPhoto] = useState<File | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'tugas' | 'riwayat' | 'pendapatan'>('tugas');
@@ -78,7 +78,8 @@ export default function Courier() {
     
     const channel = supabase.channel('courier-orders')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, (payload) => {
-        if (payload.eventType === 'UPDATE' && payload.new.status === 'Dikirim' && !payload.new.courier_id) {
+        // Bunyi kalau ada pesanan baru berstatus "Mencari Kurir" dan belum ada yang ambil
+        if (payload.eventType === 'UPDATE' && payload.new.status === 'Mencari Kurir' && !payload.new.courier_id) {
           playNotificationSound();
           toast.success("Pesanan baru siap diantar!");
         }
@@ -89,22 +90,15 @@ export default function Courier() {
     return () => { supabase.removeChannel(channel); };
   }, [currentCourier, startDate, endDate]);
 
-    const playNotificationSound = () => {
-    // Suara beep lebih keras
+  const playNotificationSound = () => {
     const audio = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
-    
-    // Bunyiin 3 kali (jeda 1 detik)
     audio.play().catch(e => console.log(e));
     setTimeout(() => { audio.currentTime = 0; audio.play().catch(e => console.log(e)); }, 1000);
     setTimeout(() => { audio.currentTime = 0; audio.play().catch(e => console.log(e)); }, 2000);
-
-    // Tambah suara TTS (Text to Speech) "Pesanan Baru"
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance("Pesanan baru siap diantar!");
       utterance.lang = 'id-ID';
-      utterance.rate = 1.0;
-      // Munculin suara TTS setelah beep ke-2
       setTimeout(() => window.speechSynthesis.speak(utterance), 1500);
     }
   };
@@ -112,16 +106,16 @@ export default function Courier() {
   async function fetchData() {
     setLoading(true);
     
-    // Ambil Tugas
+    // Ambil Tugas (Mencari Kurir ATAU yang lagi dipegang kurir ini)
     const { data: active } = await supabase
       .from('orders')
-      .select('*')
-      .eq('status', 'Dikirim')
+      .select('*, order_items(*)')
+      .in('status', ['Mencari Kurir', 'Dikirim'])
       .or(`courier_id.is.null,courier_id.eq.${currentCourier.id}`) 
       .order('updated_at', { ascending: false });
     setOrders(active || []);
 
-    // Ambil Riwayat & Hitung Pendapatan
+    // Ambil Riwayat
     const { data: history } = await supabase
       .from('orders')
       .select('*')
@@ -130,27 +124,20 @@ export default function Courier() {
       .gte('updated_at', `${startDate}T00:00:00`)
       .lte('updated_at', `${endDate}T23:59:59`)
       .order('updated_at', { ascending: false });
-      
     setHistoryOrders(history || []);
 
-       // LOGIKA PENDAPATAN BARU (Ambil dari shipping_cost)
-    const totalIncome = (history || []).reduce((sum, order) => sum + (order.shipping_cost || 0), 0);
-    setTotalIncome(totalIncome);
-
+    const income = (history || []).reduce((sum, order) => sum + (order.shipping_cost || 0), 0);
+    setTotalIncome(income);
     setLoading(false);
   }
 
-  const handleToggleStatus = async () => {
-    const newStatus = !currentCourier.is_active;
-    const { error } = await supabase.from('couriers').update({ is_active: newStatus }).eq('id', currentCourier.id);
-    if (!error) {
-      setCurrentCourier({ ...currentCourier, is_active: newStatus });
-      toast.success(newStatus ? "Anda sekarang Standby!" : "Anda sekarang Off.");
-    }
-  };
-
   const handleTakeTask = async (orderId: string) => {
-    const { error } = await supabase.from('orders').update({ courier_id: currentCourier.id }).eq('id', orderId).is('courier_id', null);
+    // Pas diambil, status berubah jadi Dikirim
+    const { error } = await supabase.from('orders').update({ 
+      courier_id: currentCourier.id,
+      status: 'Dikirim'
+    }).eq('id', orderId).is('courier_id', null);
+    
     if (error) toast.error("Gagal ambil tugas. Mungkin sudah diambil kurir lain.");
     else { toast.success("Tugas berhasil diambil!"); fetchData(); }
   };
@@ -187,6 +174,15 @@ export default function Courier() {
     }
   };
 
+  const handleToggleStatus = async () => {
+    const newStatus = !currentCourier.is_active;
+    const { error } = await supabase.from('couriers').update({ is_active: newStatus }).eq('id', currentCourier.id);
+    if (!error) {
+      setCurrentCourier({ ...currentCourier, is_active: newStatus });
+      toast.success(newStatus ? "Anda sekarang Standby!" : "Anda sekarang Off.");
+    }
+  };
+
   const handleOpenPin = (courier: any) => {
     setSelectedCourierForLogin(courier);
     setPinInput('');
@@ -211,7 +207,6 @@ export default function Courier() {
   if (!currentCourier) {
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col relative">
-        {/* Header & Hero Section sama kayak sebelumnya */}
         <div className="bg-white px-4 py-3 border-b border-gray-100 flex justify-between items-center sticky top-0 z-10">
           <div className="flex items-center gap-3">
             <div className="bg-orange-100 text-orange-500 p-2 rounded-lg"><Store size={20} /></div>
@@ -327,14 +322,12 @@ export default function Courier() {
       </header>
 
       <div className="p-4 space-y-4 max-w-3xl mx-auto">
-        {/* TABS NAVIGATION */}
         <div className="bg-gray-100 p-1 rounded-xl flex">
           <button onClick={() => setActiveTab('tugas')} className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${activeTab === 'tugas' ? 'bg-white text-orange-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>Tugas</button>
           <button onClick={() => setActiveTab('riwayat')} className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${activeTab === 'riwayat' ? 'bg-white text-orange-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>Riwayat</button>
           <button onClick={() => setActiveTab('pendapatan')} className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${activeTab === 'pendapatan' ? 'bg-white text-orange-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>Pendapatan</button>
         </div>
 
-        {/* KONTEN TAB */}
         {activeTab === 'tugas' && (
           <div>
             {loading ? <p className="text-center text-gray-500 text-sm py-4">Memuat...</p> : orders.length === 0 ? (
@@ -355,8 +348,13 @@ export default function Courier() {
                       </div>
                       <div className="border-t border-gray-200/50 pt-3 flex justify-between items-center">
                         <p className="font-bold text-orange-500 text-sm">Rp {order.total_price.toLocaleString('id-ID')}</p>
+                        
+                        {/* TOMBOL AKSI */}
                         {isMine ? (
-                          <button onClick={() => setSelectedOrder(order)} className="bg-[#F97316] text-white text-xs px-4 py-2 rounded-xl font-bold hover:bg-[#EA580C]">Selesai</button>
+                          <div className="flex gap-2">
+                            <button onClick={() => setDetailOrder(order)} className="bg-gray-200 text-gray-700 text-xs px-3 py-2 rounded-xl font-bold hover:bg-gray-300">Detail</button>
+                            <button onClick={() => setSelectedOrder(order)} className="bg-[#F97316] text-white text-xs px-3 py-2 rounded-xl font-bold hover:bg-[#EA580C]">Selesai</button>
+                          </div>
                         ) : (
                           <button onClick={() => handleTakeTask(order.id)} className="bg-blue-600 text-white text-xs px-4 py-2 rounded-xl font-bold hover:bg-blue-700">Ambil</button>
                         )}
@@ -369,6 +367,8 @@ export default function Courier() {
           </div>
         )}
 
+        {/* ... (SISA KODE PENDAPATAN & RIWAYAT SAMA SEPERTI SEBELUMNYA) ... */}
+
         {activeTab === 'pendapatan' && (
           <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 animate-fade-in-up">
             <div className="flex items-center gap-3 mb-6">
@@ -378,18 +378,10 @@ export default function Courier() {
                 <h2 className="text-3xl font-bold text-gray-800">Rp <AnimatedNumber value={totalIncome} /></h2>
               </div>
             </div>
-
             <div className="flex gap-2 mb-4 bg-gray-50 p-2 rounded-xl border">
-              <div className="flex-1">
-                <label className="text-[10px] font-bold text-gray-500 block mb-1">Dari</label>
-                <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="w-full bg-white border p-2 rounded-lg text-xs" />
-              </div>
-              <div className="flex-1">
-                <label className="text-[10px] font-bold text-gray-500 block mb-1">Sampai</label>
-                <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="w-full bg-white border p-2 rounded-lg text-xs" />
-              </div>
+              <div className="flex-1"><label className="text-[10px] font-bold text-gray-500 block mb-1">Dari</label><input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="w-full bg-white border p-2 rounded-lg text-xs" /></div>
+              <div className="flex-1"><label className="text-[10px] font-bold text-gray-500 block mb-1">Sampai</label><input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="w-full bg-white border p-2 rounded-lg text-xs" /></div>
             </div>
-            <p className="text-[10px] text-gray-400 text-center">*Pendapatan dihitung Rp 5.000 / tugas selesai.</p>
           </div>
         )}
 
@@ -399,10 +391,7 @@ export default function Courier() {
             {historyOrders.map((order) => (
               <div key={order.id} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
                 <div className="flex justify-between items-start">
-                  <div>
-                    <h3 className="font-bold text-sm text-gray-800">{order.customer_name}</h3>
-                    <p className="text-[10px] text-gray-500 mt-1">{new Date(order.updated_at).toLocaleString('id-ID')}</p>
-                  </div>
+                  <div><h3 className="font-bold text-sm text-gray-800">{order.customer_name}</h3><p className="text-[10px] text-gray-500 mt-1">{new Date(order.updated_at).toLocaleString('id-ID')}</p></div>
                   <span className="text-green-600 bg-green-50 px-2 py-1 rounded text-[10px] font-bold">Selesai</span>
                 </div>
               </div>
@@ -411,7 +400,45 @@ export default function Courier() {
         )}
       </div>
 
-      {/* MODAL UPLOAD BUKTI */}
+      {/* MODAL DETAIL PESANAN (BUAT KURIR) */}
+      {detailOrder && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
+          <div className="bg-white p-6 rounded-3xl w-full max-w-sm space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center border-b pb-3">
+              <h2 className="font-bold text-lg">Detail Tugas</h2>
+              <button onClick={() => setDetailOrder(null)} className="p-1 bg-gray-100 rounded-full"><X size={18}/></button>
+            </div>
+            
+            <div className="space-y-3 text-sm">
+              <div>
+                <p className="text-xs text-gray-500">Nama Pelanggan</p>
+                <p className="font-bold text-gray-800">{detailOrder.customer_name}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500">No. HP (Klik untuk Chat)</p>
+                <a href={`https://wa.me/${detailOrder.phone}`} target="_blank" rel="noreferrer" className="text-blue-600 font-bold underline flex items-center gap-1 mt-1">
+                  <Phone size={14}/> {detailOrder.phone}
+                </a>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500">Alamat Lengkap</p>
+                <p className="font-medium text-gray-800">{detailOrder.address}</p>
+              </div>
+              <div className="bg-gray-50 p-3 rounded-xl border">
+                <p className="text-xs font-bold text-gray-500 mb-2">Rincian Menu:</p>
+                {detailOrder.order_items?.map((item: any, i: number) => (
+                  <div key={i} className="flex justify-between text-xs mb-1">
+                    <span>{item.quantity}x {item.product_name}</span>
+                    <span>Rp {(item.price * item.quantity).toLocaleString('id-ID')}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL UPLOAD BUKTI (SELESAI) */}
       {selectedOrder && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
           <form onSubmit={handleFinishOrder} className="bg-white p-6 rounded-2xl w-full max-w-sm space-y-4">
