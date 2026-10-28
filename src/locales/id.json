@@ -67,5 +67,10 @@
   "cat_drink": "Minuman",
   "cat_snack": "Snack",
   "loading_menu": "Memuat menu...",
-  "menu_not_found": "Menu tidak ditemukan."
+  "menu_not_found": "Menu tidak ditemukan.",
+  
+  "nav_home": "Home",
+  "nav_history": "Pesanan",
+  "nav_cart": "Keranjang",
+  "nav_profile": "Akun"
 }

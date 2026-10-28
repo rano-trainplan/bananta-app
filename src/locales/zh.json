@@ -67,5 +67,10 @@
   "cat_drink": "饮料",
   "cat_snack": "小吃",
   "loading_menu": "正在加载菜单...",
-  "menu_not_found": "找不到菜单。"
+  "menu_not_found": "找不到菜单。",
+  
+  "nav_home": "首页",
+  "nav_history": "订单",
+  "nav_cart": "购物车",
+  "nav_profile": "账户"
 }

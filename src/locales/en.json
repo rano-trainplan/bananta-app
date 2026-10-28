@@ -67,5 +67,10 @@
   "cat_drink": "Drink",
   "cat_snack": "Snack",
   "loading_menu": "Loading menu...",
-  "menu_not_found": "Menu not found."
+  "menu_not_found": "Menu not found.",
+  
+  "nav_home": "Home",
+  "nav_history": "Orders",
+  "nav_cart": "Cart",
+  "nav_profile": "Account"
 }

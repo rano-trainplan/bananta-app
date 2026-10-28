@@ -1,17 +1,19 @@
 import { Home, Receipt, ShoppingCart, User } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
-import { useCart } from '../../context/CartContext'; // Import useCart
+import { useCart } from '../../context/CartContext';
+import { useLanguage } from '../../context/LanguageContext'; // <-- IMPORT BARU
 
 export default function BottomNav() {
   const location = useLocation();
   const path = location.pathname;
-  const { cartCount } = useCart(); // Ambil jumlah barang dari keranjang
+  const { cartCount } = useCart();
+  const { t } = useLanguage(); // <-- PANGGIL HOOK
 
   const navItems = [
-    { icon: Home, label: 'Home', path: '/' },
-    { icon: Receipt, label: 'Pesanan', path: '/history' },
-    { icon: ShoppingCart, label: 'Keranjang', path: '/cart' },
-    { icon: User, label: 'Akun', path: '/profile' },
+    { icon: Home, label: t('nav_home'), path: '/' },
+    { icon: Receipt, label: t('nav_history'), path: '/history' },
+    { icon: ShoppingCart, label: t('nav_cart'), path: '/cart' },
+    { icon: User, label: t('nav_profile'), path: '/profile' },
   ];
 
   return (
@@ -22,12 +24,10 @@ export default function BottomNav() {
         return (
           <Link key={item.label} to={item.path} className={`flex flex-col items-center gap-1 relative ${isActive ? 'text-brand-500' : 'text-gray-400'}`}>
             
-            {/* Ikon dengan Badge (Kalau Keranjang) */}
             <div className="relative">
               <Icon size={22} strokeWidth={isActive ? 2.5 : 2} />
               
-              {/* TAMBAHAN BADGE ANGKA */}
-              {item.label === 'Keranjang' && cartCount > 0 && (
+              {item.path === '/cart' && cartCount > 0 && (
                 <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
                   {cartCount}
                 </span>
