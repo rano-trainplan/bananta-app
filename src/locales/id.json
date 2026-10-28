@@ -72,5 +72,23 @@
   "nav_home": "Home",
   "nav_history": "Pesanan",
   "nav_cart": "Keranjang",
-  "nav_profile": "Akun"
+  "nav_profile": "Akun",
+
+  "history_title": "Riwayat Pesanan",
+  "empty_history": "Belum Ada Riwayat Pesanan",
+  "empty_history_sub": "Kamu belum pernah melakukan pemesanan di Bananta Sultan lewat perangkat ini. Makanan lezat buatan kami siap diantar ke tempatmu!",
+  "order_now_btn": "Pesan Sekarang",
+  "fav_title": "FAVORIT WARGA BANANTA SULTAN",
+  "fav_sub": "Pedas nampol, kriuk maksimal...",
+  "advantages_title": "Keuntungan Pesan Online di Bananta Sultan",
+  "adv_1_title": "Pengantaran Cepat",
+  "adv_1_sub": "Langsung diantarkan oleh kurir resmi resto dalam kondisi hangat & higienis.",
+  "adv_2_title": "Bayar Sangat Praktis",
+  "adv_2_sub": "Dukungan penuh untuk QRIS instan, e-wallet, dan transfer bank otomatis.",
+  "adv_3_title": "Live Tracking Akurat",
+  "adv_3_sub": "Pantau perjalanan pesanan secara live dari wajan dapur hingga ke depan pintu.",
+  "help_question": "Ada kendala dengan akunmu?",
+  "contact_help": "Hubungi Bantuan",
+  "status_finished": "Selesai",
+  "status_rejected": "Ditolak"
 }
