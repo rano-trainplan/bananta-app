@@ -1,302 +1,335 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import AdminLayout from '../components/layout/AdminLayout';
 import toast from 'react-hot-toast';
-import { Plus, Edit, Trash2, Bike, Phone, Upload, X, ShieldCheck, User, Lock } from 'lucide-react';
+import {
+  Eye, X, Calendar, Filter, Store, CheckCircle,
+  XCircle, Clock, Truck, MapPin, Phone, ArrowLeft,
+  User, 
+} from 'lucide-react';
+import AdminLayout from '../components/layout/AdminLayout';
 
-export default function AdminCouriers() {
-  const [couriers, setCouriers] = useState<any[]>([]);
-  
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [formData, setFormData] = useState({ 
-    id: '', name: '', phone: '', plate_number: '', photo_url: '', 
-    vehicle_type: '', is_active: true, pin: ''
-  });
-  const [photoFile, setPhotoFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+export default function Admin() {
+  const [orders, setOrders] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedOrder, setSelectedOrder] = useState<any>(null);
+  const [modalType, setModalType] = useState<'detail' | 'proof' | null>(null);
 
-  useEffect(() => { fetchCouriers(); }, []);
+  const today = new Date().toISOString().split('T')[0];
+  const [startDate, setStartDate] = useState(today);
+  const [endDate, setEndDate] = useState(today);
+  const [filterStatus, setFilterStatus] = useState('Semua');
 
-  async function fetchCouriers() {
-    const { data } = await supabase.from('couriers').select('*').order('name');
-    setCouriers(data || []);
+   useEffect(() => {
+    fetchOrders();
+  }, [startDate, endDate]);
+
+  async function fetchOrders() {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from('orders')
+      .select('*, order_items(*)')
+      .gte('created_at', `${startDate}T00:00:00`)
+      .lte('created_at', `${endDate}T23:59:59`)
+      .order('created_at', { ascending: false });
+
+    if (error) console.error(error); 
+    else setOrders(data || []);
+    setLoading(false);
   }
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Yakin mau hapus kurir ini?')) return;
-    await supabase.from('couriers').delete().eq('id', id);
-    toast.success('Kurir dihapus');
-    fetchCouriers();
+  
+
+  const filteredOrders = orders.filter(o => {
+    if (filterStatus === 'Semua') return true;
+    if (filterStatus === 'Diproses') return ['Validasi', 'Masak', 'Dikirim'].includes(o.status);
+    return o.status === filterStatus;
+  });
+
+  const totalSelesai = orders.filter(o => o.status === 'Selesai');
+  const totalPendapatanSelesai = totalSelesai.reduce((sum, o) => sum + o.total_price, 0);
+
+  const countSelesai = orders.filter(o => o.status === 'Selesai').length;
+  const countDitolak = orders.filter(o => o.status === 'Ditolak').length;
+  const countDiproses = orders.filter(o => ['Validasi', 'Masak', 'Dikirim'].includes(o.status)).length;
+
+  const handleAcceptOrder = async (id: string) => {
+    await supabase.from('orders').update({ status: 'Validasi' }).eq('id', id);
+    toast.success("Pesanan diterima!"); fetchOrders();
   };
 
-  const openModal = (courier?: any) => {
-    if (courier) {
-      setFormData({
-        id: courier.id,
-        name: courier.name,
-        phone: courier.phone || '',
-        plate_number: courier.plate_number || '',
-        photo_url: courier.photo_url || '',
-        vehicle_type: courier.vehicle_type || '',
-        is_active: courier.is_active ?? true,
-        pin: courier.pin || ''
-      });
-      setPreviewUrl(courier.photo_url || null);
-    } else {
-      setFormData({ id: '', name: '', phone: '', plate_number: '', photo_url: '', vehicle_type: '', is_active: true, pin: '' });
-      setPreviewUrl(null);
-    }
-    setPhotoFile(null);
-    setIsModalOpen(true);
+  const handleValidatePayment = async (id: string) => {
+    await supabase.from('orders').update({ status: 'Masak' }).eq('id', id);
+    toast.success("Pembayaran divalidasi! Lanjut masak."); setModalType(null); fetchOrders();
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) { setPhotoFile(file); setPreviewUrl(URL.createObjectURL(file)); }
+  const handleRejectPayment = async (id: string) => {
+    await supabase.from('orders').update({ status: 'Ditolak' }).eq('id', id);
+    toast.error("Minta upload ulang bukti TF."); setModalType(null); fetchOrders();
   };
 
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    try {
-      let finalPhotoUrl = formData.photo_url;
-      if (photoFile) {
-        const fileExt = photoFile.name.split('.').pop();
-        const fileName = `courier-${Date.now()}.${fileExt}`;
-        const { error: uploadError } = await supabase.storage.from('uploads').upload(fileName, photoFile);
-        if (uploadError) throw uploadError;
-        const { data: urlData } = supabase.storage.from('uploads').getPublicUrl(fileName);
-        finalPhotoUrl = urlData.publicUrl;
-      }
-
-      const payload = {
-        name: formData.name,
-        phone: formData.phone,
-        plate_number: formData.plate_number,
-        photo_url: finalPhotoUrl,
-        vehicle_type: formData.vehicle_type,
-        is_active: formData.is_active,
-        pin: formData.pin
-      };
-
-      if (formData.id) {
-        await supabase.from('couriers').update(payload).eq('id', formData.id);
-        toast.success('Data kurir diupdate!');
-      } else {
-        await supabase.from('couriers').insert([payload]);
-        toast.success('Kurir baru ditambahkan!');
-      }
-      setIsModalOpen(false);
-      fetchCouriers();
-    } catch (error) {
-      console.error(error);
-      toast.error("Gagal menyimpan kurir.");
-    }
+  const handleReleaseToCouriers = async (id: string) => {
+    if (!confirm("Lepas pesanan ini ke semua kurir? (Siapa cepat, dia dapat)")) return;
+    await supabase.from('orders').update({
+      courier_id: null,
+      status: 'Dikirim'
+    }).eq('id', id);
+    toast.success("Pesanan dilepas ke kurir!"); 
+    setModalType(null); 
+    fetchOrders();
   };
-
-  const totalKurir = couriers.length;
-  const siapJalan = couriers.filter(c => c.is_active).length;
-  const sedangJalan = totalKurir - siapJalan;
 
   return (
     <AdminLayout>
-      <div className="flex justify-between items-start mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-800">Manajemen Kurir</h1>
-          <p className="text-sm text-gray-500 mt-1">Kelola data pengantar yang terdaftar...</p>
-        </div>
-        <button onClick={() => openModal()} className="bg-[#F59E0B] text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 text-sm shadow-md hover:bg-[#D97706] transition-colors">
-          <Plus size={18} /> Tambah Kurir
-        </button>
-      </div>
-
-      <div className="bg-white rounded-full px-5 py-3 shadow-sm border border-gray-100 mb-6 flex justify-between items-center max-w-md">
-        <div className="flex items-center gap-2">
-          <span className="w-2.5 h-2.5 rounded-full bg-orange-400"></span>
-          <span className="text-sm font-bold text-gray-700">{totalKurir} Kurir Terdaftar</span>
-        </div>
-        <div className="flex gap-4 text-xs font-bold">
-          <span className="text-green-600 flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500"></span> {siapJalan} Siap</span>
-          <span className="text-orange-500 flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-orange-500"></span> {sedangJalan} Jalan</span>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 gap-4 max-w-3xl">
-        {couriers.map((c) => (
-          <div key={c.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
-            <div className="flex justify-between items-start">
-              <div className="flex gap-4">
-                <div className="relative">
-                  <img 
-                    src={c.photo_url || `https://ui-avatars.com/api/?name=${c.name}&background=F59E0B&color=fff`} 
-                    alt={c.name} 
-                    className="w-14 h-14 rounded-full object-cover border-2 border-gray-100" 
-                  />
-                  {c.is_active && (
-                    <div className="absolute -bottom-1 -right-1 bg-white p-0.5 rounded-full">
-                      <div className="bg-green-500 w-3 h-3 rounded-full border-2 border-white"></div>
-                    </div>
-                  )}
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-bold text-gray-800 text-lg">{c.name}</h3>
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${c.is_active ? 'bg-green-50 text-green-600 border border-green-200' : 'bg-gray-100 text-gray-500'}`}>
-                      {c.is_active ? 'Aktif • Siap Antar' : 'Nonaktif'}
-                    </span>
-                  </div>
-                  <p className="text-xs text-gray-500 flex items-center gap-1.5 mt-1"><Phone size={12}/> {c.phone || '-'}</p>
-                </div>
-              </div>
-
-              <div className="flex gap-2">
-                <button onClick={() => openModal(c)} className="p-2 bg-gray-50 text-gray-600 rounded-lg hover:bg-gray-200 transition-colors"><Edit size={16}/></button>
-                <button onClick={() => handleDelete(c.id)} className="p-2 bg-red-50 text-red-500 rounded-lg hover:bg-red-100 transition-colors"><Trash2 size={16}/></button>
-              </div>
-            </div>
-
-            <div className="border-t border-dashed border-gray-200 my-4"></div>
-
-            <div className="flex justify-between items-center text-xs">
-              <span className="bg-orange-50 text-orange-600 font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5">
-                <Bike size={14}/> {c.plate_number}
-              </span>
-              <span className="text-gray-500 font-medium">{c.vehicle_type || 'Motor'}</span>
-            </div>
+      {/* TOP INFO */}
+      <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mb-6 flex justify-between items-center">
+        <div className="flex items-center gap-3">
+          <div className="bg-orange-100 p-2 rounded-xl text-orange-500"><Store size={24} /></div>
+          <div>
+            <p className="text-[10px] font-bold text-orange-500 uppercase tracking-wider">Sultan Kitchen</p>
+            <h2 className="font-bold text-sm text-gray-800">Panel Kasir & Dapur</h2>
           </div>
+        </div>
+        <span className="bg-green-100 text-green-700 text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1.5">
+          <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span> Toko Buka
+        </span>
+      </div>
+
+      {/* HEADER */}
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-800">Daftar Pesanan</h1>
+        <p className="text-sm text-gray-500 mt-1">Kelola dan pantau seluruh transaksi pelanggan secara realtime.</p>
+      </div>
+
+      {/* FILTER */}
+      <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mb-4 flex flex-col md:flex-row gap-3 items-center justify-between">
+        <div className="flex items-center gap-2 w-full md:w-auto bg-gray-50 px-4 py-2.5 rounded-xl border border-gray-200">
+          <Filter size={16} className="text-gray-500" />
+          <div className="h-5 w-px bg-gray-300 mx-1"></div>
+          <Calendar size={16} className="text-gray-400" />
+          <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="bg-transparent text-sm font-semibold text-gray-700 outline-none w-32" />
+          <span className="text-gray-400 text-xs">s/d</span>
+          <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="bg-transparent text-sm font-semibold text-gray-700 outline-none w-32" />
+        </div>
+      </div>
+
+      {/* TABS */}
+      <div className="flex gap-2 overflow-x-auto pb-4 mb-2 scrollbar-hide">
+        {[
+          { label: 'Semua', count: orders.length, color: 'bg-orange-500' },
+          { label: 'Selesai', count: countSelesai, color: 'bg-green-500' },
+          { label: 'Ditolak', count: countDitolak, color: 'bg-red-500' },
+          { label: 'Diproses', count: countDiproses, color: 'bg-gray-800' },
+        ].map((tab) => (
+          <button
+            key={tab.label}
+            onClick={() => setFilterStatus(tab.label)}
+            className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap flex items-center gap-2 transition-colors border ${
+              filterStatus === tab.label
+                ? `${tab.color} text-white border-transparent`
+                : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+            }`}
+          >
+            {tab.label} 
+            <span className={`px-1.5 py-0.5 rounded-md text-[10px] ${
+               filterStatus === tab.label ? 'bg-white/20' : 'bg-gray-100 text-gray-500'
+            }`}>{tab.count}</span>
+          </button>
         ))}
       </div>
 
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-3xl w-full max-w-sm overflow-hidden flex flex-col max-h-[95vh]">
+      {/* LIST PESANAN */}
+      {loading ? (
+        <div className="text-center py-20 text-gray-500">Memuat pesanan...</div>
+      ) : filteredOrders.length === 0 ? (
+        <div className="bg-white rounded-2xl p-10 text-center border border-gray-100 shadow-sm">
+          <p className="text-gray-500 font-medium">Belum ada pesanan di periode/status ini.</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {filteredOrders.map((order) => {
+            const isDitolak = order.status === 'Ditolak';
+            const isSelesai = order.status === 'Selesai';
             
-            <div className="bg-orange-50 p-5 flex justify-between items-start">
-              <div>
-                <p className="text-[10px] font-bold text-orange-500 uppercase tracking-wider mb-0.5">Armada Baru</p>
-                <h2 className="font-bold text-xl text-gray-800">{formData.id ? 'Edit Kurir' : 'Tambah Kurir Baru'}</h2>
-                <p className="text-[10px] text-gray-500 mt-1">Lengkapi data kurir armada internal kedai</p>
+            return (
+              <div key={order.id} className={`bg-white rounded-xl shadow-sm border p-4 transition-all hover:shadow-md ${isDitolak ? 'border-red-200' : 'border-gray-200'}`}>
+                
+                <div className="flex justify-between items-start mb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="bg-gray-100 text-gray-600 text-[10px] font-bold px-2 py-1 rounded">#{order.id.slice(0, 6)}</span>
+                    <span className="text-xs text-gray-400 font-medium">{new Date(order.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} WIT</span>
+                  </div>
+                  <span className={`text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1 ${
+                    isSelesai ? 'bg-green-100 text-green-700' : 
+                    isDitolak ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'
+                  }`}>
+                    {isSelesai ? <CheckCircle size={10} /> : isDitolak ? <XCircle size={10} /> : <Clock size={10} />}
+                    {order.status}
+                  </span>
+                </div>
+
+                <div className="mb-4">
+                  <h3 className="font-bold text-sm text-gray-800 uppercase">{order.customer_name}</h3>
+                  <div className="text-xs text-gray-500 mt-1 flex flex-col gap-0.5">
+                    <p>Metode: {order.payment_method} • {order.order_items?.length || 0} Item</p>
+                    {order.address && <p className="flex items-center gap-1"><MapPin size={10}/> {order.address}</p>}
+                    {order.phone && <p className="flex items-center gap-1"><Phone size={10}/> {order.phone}</p>}
+                  </div>
+                  {isDitolak && <p className="text-[10px] text-red-500 font-bold mt-1 flex items-center gap-1"><XCircle size={10} /> Alasan: Bukti transfer tidak valid</p>}
+                </div>
+
+                <div className="border-t border-dashed border-gray-200 my-3"></div>
+
+                <div className="flex flex-col sm:flex-row gap-3 justify-between sm:items-end">
+                  <div>
+                    <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wider mb-1">Total Pesanan</p>
+                    <p className="text-lg font-bold text-orange-500">Rp {order.total_price.toLocaleString('id-ID')}</p>
+                  </div>
+                  
+                  <div className="flex gap-2 w-full sm:w-auto">
+                    {order.status === 'Dibuat' && (
+                      <button onClick={() => handleAcceptOrder(order.id)} className="flex-1 sm:flex-none justify-center bg-blue-500 text-white text-xs px-4 py-2 rounded-lg font-bold flex items-center">Terima Pesanan</button>
+                    )}
+                    {order.status === 'Validasi' && (
+                      <button onClick={() => { setSelectedOrder(order); setModalType('proof'); }} className="flex-1 sm:flex-none justify-center bg-orange-500 text-white text-xs px-4 py-2 rounded-lg font-bold flex items-center">Cek Bukti TF</button>
+                    )}
+                    {order.status === 'Masak' && (
+                      <button onClick={() => handleReleaseToCouriers(order.id)} className="flex-1 sm:flex-none justify-center bg-orange-500 text-white text-xs px-4 py-2 rounded-lg font-bold flex items-center gap-1">
+                        <Truck size={14}/> Lepas ke Kurir
+                      </button>
+                    )}
+                    <button onClick={() => { setSelectedOrder(order); setModalType('detail'); }} className={`flex-1 sm:flex-none justify-center text-xs px-4 py-2 rounded-lg font-bold flex items-center gap-1 ${isDitolak ? 'bg-red-50 text-red-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+                      <Eye size={14} /> Detail
+                    </button>
+                  </div>
+                </div>
               </div>
-              <button onClick={() => setIsModalOpen(false)} className="p-1.5 bg-white text-gray-400 rounded-full hover:bg-gray-100"><X size={16}/></button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* FOOTER SUMMARY */}
+      {!loading && filteredOrders.length > 0 && (
+        <div className="mt-6 bg-orange-50 border border-orange-100 rounded-xl p-4 flex justify-between items-center">
+          <div>
+            <p className="text-[10px] font-bold text-orange-500 uppercase tracking-wider">Total Transaksi Selesai</p>
+            <p className="text-xs text-gray-500 mt-0.5">{totalSelesai.length} pesanan terverifikasi</p>
+          </div>
+          <p className="text-xl font-bold text-orange-600">Rp {totalPendapatanSelesai.toLocaleString('id-ID')}</p>
+        </div>
+      )}
+
+      {/* MODAL DETAIL */}
+      {modalType === 'detail' && selectedOrder && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-3xl w-full max-w-sm max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
+            <div className="p-5 border-b border-gray-100 flex justify-between items-start sticky top-0 bg-white z-10">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="bg-orange-100 text-orange-600 text-[10px] font-bold px-2 py-0.5 rounded">#{selectedOrder.id.slice(0,6)}</span>
+                  <span className="text-xs text-gray-400 flex items-center gap-1">🕒 {new Date(selectedOrder.created_at).toLocaleString('id-ID', {day: 'numeric', month: 'short', hour: '2-digit', minute:'2-digit'})} WIT</span>
+                </div>
+                <h2 className="font-bold text-lg text-gray-800">Detail Pesanan</h2>
+              </div>
+              <button onClick={() => setModalType(null)} className="p-1.5 bg-gray-100 text-gray-500 rounded-full hover:bg-gray-200 transition-colors">
+                <X size={18}/>
+              </button>
             </div>
 
-            <form onSubmit={handleSave} className="p-5 space-y-4 overflow-y-auto">
-              
-              <div>
-                <div className="flex justify-between items-center mb-1">
-                  <label className="text-xs font-bold text-gray-700">Foto Profil Kurir</label>
-                </div>
-                {previewUrl ? (
-                  <div className="relative inline-block">
-                    <img src={previewUrl} alt="Preview" className="w-16 h-16 rounded-full object-cover border-2 border-orange-200" />
-                    <button type="button" onClick={() => { setPhotoFile(null); setPreviewUrl(null); }} className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5"><X size={12}/></button>
+            <div className="p-5 overflow-y-auto space-y-5 bg-gray-50/50">
+              <div className="bg-orange-50 border border-orange-100 rounded-xl p-4 flex justify-between items-center">
+                <div className="flex items-center gap-2">
+                  <div className="bg-orange-500 w-2.5 h-2.5 rounded-full animate-pulse"></div>
+                  <div>
+                    <p className="text-xs text-gray-600 font-semibold">Status Pesanan: Sedang Diproses</p>
+                    <p className="text-[10px] text-gray-500">({selectedOrder.status})</p>
                   </div>
-                ) : (
-                  <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 flex items-center gap-3 cursor-pointer relative">
-                    <input type="file" accept="image/*" onChange={handleFileChange} className="absolute inset-0 opacity-0 cursor-pointer" />
-                    <div className="bg-white p-2 rounded-lg text-orange-400 shadow-sm"><Upload size={20} /></div>
-                    <div className="flex-1">
-                      <p className="text-xs font-bold text-gray-700">Unggah Foto Profil</p>
+                </div>
+                <span className="text-xs font-bold text-orange-600">{selectedOrder.status === 'Masak' ? 'Dimasak' : selectedOrder.status}</span>
+              </div>
+
+              <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm space-y-3">
+                <div className="flex justify-between items-center">
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Pelanggan</p>
+                  <a href={`https://wa.me/${selectedOrder.phone}`} target="_blank" rel="noreferrer" className="bg-green-50 text-green-600 text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1">
+                    <Phone size={10}/> WhatsApp
+                  </a>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="bg-gray-100 p-2 rounded-full text-gray-500"><User size={16}/></div>
+                  <div>
+                    <p className="font-bold text-sm text-gray-800 uppercase">{selectedOrder.customer_name}</p>
+                    <p className="text-xs text-gray-500">{selectedOrder.phone}</p>
+                  </div>
+                </div>
+                <div className="border-t border-dashed pt-3 flex items-start gap-3">
+                  <div className="bg-gray-100 p-2 rounded-full text-gray-500 mt-0.5"><MapPin size={16}/></div>
+                  <div>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase">Alamat Pengantaran</p>
+                    <p className="text-xs text-gray-700 font-medium mt-0.5">{selectedOrder.address}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <div className="flex justify-between items-end mb-2">
+                  <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Rincian Menu ({selectedOrder.order_items?.length || 0} Item)</p>
+                  <p className="text-[10px] text-gray-400 font-medium">Porsi</p>
+                </div>
+                <div className="space-y-2">
+                  {selectedOrder.order_items?.map((item: any, idx: number) => (
+                    <div key={idx} className="bg-white border border-gray-100 p-3 rounded-xl flex justify-between items-center shadow-sm">
+                      <div className="flex items-center gap-3">
+                        <span className="bg-orange-100 text-orange-600 font-bold text-xs px-1.5 py-0.5 rounded">{item.quantity}x</span>
+                        <div>
+                          <p className="font-bold text-sm text-gray-800">{item.product_name}</p>
+                        </div>
+                      </div>
+                      <p className="font-bold text-sm text-gray-800">Rp {(item.price * item.quantity).toLocaleString('id-ID')}</p>
                     </div>
-                  </div>
-                )}
-              </div>
-
-              <div>
-                <label className="text-xs font-bold text-gray-700 mb-1 block">Nama Lengkap Kurir <span className="text-red-500">*</span></label>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-                  <input 
-                    value={formData.name} 
-                    onChange={e => setFormData({...formData, name: e.target.value})} 
-                    placeholder="Contoh: Alex Pratama" 
-                    className="w-full bg-gray-50 border border-gray-200 p-2.5 pl-9 rounded-xl text-sm focus:ring-2 focus:ring-orange-500 outline-none" 
-                    required 
-                  />
+                  ))}
                 </div>
               </div>
 
-              <div>
-                <label className="text-xs font-bold text-gray-700 mb-1 block">Nomor WhatsApp / HP <span className="text-red-500">*</span></label>
-                <div className="relative flex items-center bg-gray-50 border border-gray-200 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-orange-500">
-                  <div className="px-3 border-r border-gray-200 flex items-center gap-1 text-sm font-bold text-gray-600">
-                    <Phone size={14} className="text-orange-500"/> +62
-                  </div>
-                  <input 
-                    value={formData.phone} 
-                    onChange={e => setFormData({...formData, phone: e.target.value})} 
-                    placeholder="812-xxxx-xxxx" 
-                    className="w-full bg-transparent p-2.5 text-sm outline-none" 
-                    required 
-                  />
-                </div>
-              </div>
-
-              <div>
-                <div className="flex justify-between items-center mb-1">
-                  <label className="text-xs font-bold text-gray-700">Plat Nomor Kendaraan <span className="text-red-500">*</span></label>
-                </div>
-                <div className="relative">
-                  <Bike className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-                  <input 
-                    value={formData.plate_number} 
-                    onChange={e => setFormData({...formData, plate_number: e.target.value})} 
-                    placeholder="CONTOH: DG 6598 SRN" 
-                    className="w-full bg-gray-50 border border-gray-200 p-2.5 pl-9 rounded-xl text-sm font-mono font-bold text-gray-700 focus:ring-2 focus:ring-orange-500 outline-none" 
-                    required 
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="text-xs font-bold text-gray-700 mb-1 block">Jenis / Merk Motor</label>
-                <div className="relative">
-                  <Bike className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-                  <input 
-                    value={formData.vehicle_type} 
-                    onChange={e => setFormData({...formData, vehicle_type: e.target.value})} 
-                    placeholder="Contoh: Honda Vario 160 Hitam" 
-                    className="w-full bg-gray-50 border border-gray-200 p-2.5 pl-9 rounded-xl text-sm text-gray-700 focus:ring-2 focus:ring-orange-500 outline-none" 
-                  />
-                </div>
-              </div>
-
-              {/* INPUT PIN BARU */}
-              <div className="bg-orange-50 border border-orange-100 rounded-xl p-3">
-                <label className="text-xs font-bold text-gray-800 mb-1 block flex items-center gap-1"><Lock size={12}/> PIN Rahasia Kurir (4 Angka)</label>
-                <input 
-                  type="text"
-                  maxLength={4}
-                  value={formData.pin} 
-                  onChange={e => setFormData({...formData, pin: e.target.value.replace(/\D/g, '')})} 
-                  placeholder="Contoh: 1234" 
-                  className="w-full bg-white border border-gray-200 p-2.5 rounded-xl text-sm font-bold tracking-widest focus:ring-2 focus:ring-orange-500 outline-none" 
-                />
-                <p className="text-[9px] text-gray-500 mt-1">PIN ini dipakai kurir untuk masuk ke halaman tugas.</p>
-              </div>
-
-              <div className="bg-orange-50 border border-orange-100 rounded-xl p-3 flex justify-between items-center">
+              <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 flex justify-between items-center">
                 <div>
-                  <p className="text-xs font-bold text-gray-800">Status Langsung Siap</p>
-                  <p className="text-[10px] text-gray-500">Kurir dapat langsung menerima order</p>
+                  <p className="text-[10px] font-bold text-orange-600 uppercase tracking-wider">Total Tagihan</p>
                 </div>
-                <label className="toggle-switch">
-                  <input 
-                    type="checkbox" 
-                    checked={formData.is_active} 
-                    onChange={e => setFormData({...formData, is_active: e.target.checked})} 
-                  />
-                  <span className="slider"></span>
-                </label>
+                <p className="text-xl font-bold text-orange-600">Rp {selectedOrder.total_price.toLocaleString('id-ID')}</p>
               </div>
+            </div>
 
-              <div className="flex gap-2 pt-2">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 bg-gray-100 py-3 rounded-xl font-bold text-sm text-gray-600 hover:bg-gray-200 transition-colors">Batal</button>
-                <button type="submit" className="flex-1 bg-[#F59E0B] text-white py-3 rounded-xl font-bold text-sm hover:bg-[#D97706] transition-colors shadow-md flex justify-center items-center gap-2">
-                  <ShieldCheck size={16}/> Simpan Kurir
+            <div className="p-4 border-t border-gray-100 bg-white flex gap-2">
+              <button onClick={() => setModalType(null)} className="px-4 py-3 bg-gray-100 text-gray-600 rounded-xl font-bold text-sm flex items-center gap-2 hover:bg-gray-200 transition-colors">
+                <ArrowLeft size={16}/> Tutup
+              </button>
+              {selectedOrder.status === 'Masak' && (
+                <button onClick={() => { setModalType(null); handleReleaseToCouriers(selectedOrder.id); }} className="flex-1 bg-orange-500 text-white rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-orange-600 shadow-md transition-colors">
+                  <Truck size={16}/> Lepas ke Kurir
                 </button>
-              </div>
-            </form>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL CEK BUKTI TF */}
+      {modalType === 'proof' && selectedOrder && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
+          <div className="bg-white p-4 rounded-2xl w-full max-w-sm">
+            <div className="flex justify-between items-center mb-3">
+              <h2 className="font-bold text-lg">Bukti Transfer</h2>
+              <button onClick={() => setModalType(null)} className="p-1 bg-gray-200 rounded-full"><X size={18}/></button>
+            </div>
+            {selectedOrder.payment_proof ? (
+              <img src={selectedOrder.payment_proof} alt="Bukti TF" className="w-full rounded-lg border mb-4" />
+            ) : (
+              <p className="text-center text-red-500 italic mb-4">Pelanggan tidak upload bukti.</p>
+            )}
+            <div className="flex gap-2">
+              <button onClick={() => handleRejectPayment(selectedOrder.id)} className="flex-1 bg-red-500 text-white py-2 rounded-lg font-bold text-sm">Minta Upload Ulang</button>
+              <button onClick={() => handleValidatePayment(selectedOrder.id)} className="flex-1 bg-green-500 text-white py-2 rounded-lg font-bold text-sm">Validasi</button>
+            </div>
           </div>
         </div>
       )}
