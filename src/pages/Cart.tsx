@@ -4,12 +4,12 @@ import { Trash2, Plus, Minus, ArrowLeft, X, Image as ImageIcon, Store, Bike, Cop
 import { useCart } from '../context/CartContext';
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
-import { useLanguage } from '../context/LanguageContext'; // <-- IMPORT
+import { useLanguage } from '../context/LanguageContext';
 
 export default function Cart() {
   const { cart, updateQuantity, removeFromCart, cartTotal } = useCart();
   const navigate = useNavigate();
-  const { t } = useLanguage(); // <-- HOOK
+  const { t } = useLanguage();
 
   const [nama, setNama] = useState('');
   const [noHp, setNoHp] = useState('');
@@ -219,7 +219,18 @@ export default function Cart() {
                 </div>
               )}
 
-                                {storeSettings.bank_name_2 && (
+              {metode === 'Transfer Bank' && storeSettings && (
+                <div className="space-y-3">
+                  <div onClick={() => handleCopy(storeSettings.bank_account, 'No. Rek ' + storeSettings.bank_name)} className="bg-gradient-to-r from-blue-600 to-blue-800 p-4 rounded-xl shadow-md text-white cursor-pointer relative overflow-hidden group">
+                    <div className="flex justify-between items-start mb-2">
+                      <p className="font-bold text-sm">{storeSettings.bank_name}</p>
+                      {copied === 'No. Rek ' + storeSettings.bank_name ? <Check size={16} /> : <Copy size={16} className="opacity-50 group-hover:opacity-100" />}
+                    </div>
+                    <p className="text-lg font-mono tracking-widest">{storeSettings.bank_account}</p>
+                    <p className="text-xs opacity-80 mt-1">a.n. {storeSettings.bank_owner}</p>
+                  </div>
+
+                  {storeSettings.bank_name_2 && (
                     <div onClick={() => handleCopy(storeSettings.bank_account_2, 'No. Rek ' + storeSettings.bank_name_2)} className="bg-gradient-to-r from-yellow-500 to-yellow-600 p-4 rounded-xl shadow-md text-white cursor-pointer relative overflow-hidden group">
                       <div className="flex justify-between items-start mb-2">
                         <p className="font-bold text-sm">{storeSettings.bank_name_2}</p>
@@ -229,6 +240,15 @@ export default function Cart() {
                       <p className="text-xs opacity-80 mt-1">a.n. {storeSettings.bank_owner_2}</p>
                     </div>
                   )}
+
+                  <p className="text-center text-sm text-gray-500">Klik kartu buat copy No. Rek</p>
+                  <div className="bg-gray-50 p-3 rounded-lg text-center border">
+                    <p className="text-sm font-bold text-gray-600">Total Transfer:</p>
+                    <p className="text-xl font-bold text-[#F59E0B]">Rp {grandTotal.toLocaleString('id-ID')}</p>
+                  </div>
+                </div>
+              )}
+
               <div>
                 <label className="text-xs text-red-500 mb-1 block font-bold">{t('upload_proof')}</label>
                 {!previewUrl ? (
