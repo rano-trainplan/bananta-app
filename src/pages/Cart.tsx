@@ -14,7 +14,7 @@ export default function Cart() {
   const [nama, setNama] = useState('');
   const [noHp, setNoHp] = useState('');
   const [alamat, setAlamat] = useState('');
-  const [metode, setMetode] = useState('QRIS');
+  const [metode, setMetode] = useState('Transfer Bank'); // Default langsung ke Transfer
   const [buktiTransfer, setBuktiTransfer] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -207,17 +207,18 @@ export default function Cart() {
 
               <h3 className="font-bold text-md border-b pb-2 pt-2">{t('payment_method')}</h3>
               <div className="flex gap-2">
-                <button type="button" onClick={() => setMetode('QRIS')} className={`flex-1 py-2.5 text-sm font-bold rounded-xl border-2 transition-all ${metode === 'QRIS' ? 'bg-[#F59E0B] text-white border-[#F59E0B] shadow-md' : 'bg-white text-gray-500 border-gray-200'}`}>QRIS</button>
+                {/* TOMBOL QRIS DISABLED */}
+                <button 
+                  type="button" 
+                  onClick={() => toast.error(t('qris_disabled'))} 
+                  className="flex-1 py-2.5 text-sm font-bold rounded-xl border-2 border-gray-100 bg-gray-50 text-gray-400 cursor-not-allowed relative"
+                >
+                  QRIS
+                  <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[8px] px-1.5 py-0.5 rounded-full">{t('qris_unavailable')}</span>
+                </button>
+                
                 <button type="button" onClick={() => setMetode('Transfer Bank')} className={`flex-1 py-2.5 text-sm font-bold rounded-xl border-2 transition-all ${metode === 'Transfer Bank' ? 'bg-[#F59E0B] text-white border-[#F59E0B] shadow-md' : 'bg-white text-gray-500 border-gray-200'}`}>Transfer</button>
               </div>
-
-              {metode === 'QRIS' && storeSettings?.qris_image && (
-                <div className="bg-gray-50 p-3 rounded-lg text-center border">
-                  <p className="text-sm font-bold mb-2">Scan QRIS:</p>
-                  <img src={storeSettings.qris_image} alt="QRIS" className="w-48 h-48 object-contain mx-auto rounded-lg" />
-                  <p className="text-lg font-bold text-[#F59E0B] mt-2">Total: Rp {grandTotal.toLocaleString('id-ID')}</p>
-                </div>
-              )}
 
               {metode === 'Transfer Bank' && storeSettings && (
                 <div className="space-y-3">

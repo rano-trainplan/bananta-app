@@ -93,5 +93,7 @@
   "status_rejected": "Ditolak",
 
   "click_to_copy": "Klik kartu buat copy No. Rek",
-  "total_transfer": "Total Transfer:"
+  "total_transfer": "Total Transfer:",
+  "qris_disabled": "Maaf, metode QRIS belum tersedia saat ini. Silakan gunakan Transfer Bank.",
+  "qris_unavailable": "Belum Tersedia"
 }

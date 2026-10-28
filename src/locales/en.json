@@ -93,5 +93,7 @@
   "status_rejected": "Rejected",
 
   "click_to_copy": "Click card to copy Account No.",
-  "total_transfer": "Total Transfer:"
+  "total_transfer": "Total Transfer:",
+  "qris_disabled": "Sorry, QRIS method is not available yet. Please use Bank Transfer.",
+  "qris_unavailable": "Not Available"
 }

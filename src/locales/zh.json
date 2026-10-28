@@ -93,5 +93,7 @@
   "status_rejected": "拒绝",
 
   "click_to_copy": "点击卡片复制账号",
-  "total_transfer": "总转账金额："
+  "total_transfer": "总转账金额：",
+  "qris_disabled": "抱歉，目前暂不支持 QRIS 付款方式。请使用银行转账。",
+  "qris_unavailable": "暂不可用"
 }
