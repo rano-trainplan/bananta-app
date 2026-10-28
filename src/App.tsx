@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
+import { useState, useEffect } from 'react'; // <-- IMPORT BARU
 import Home from './pages/Home';
 import Cart from './pages/Cart';
 import Tracking from './pages/Tracking';
@@ -13,7 +14,7 @@ import Courier from './pages/Courier';
 import History from './pages/History';
 import Profile from './pages/Profile';
 import { CartProvider } from './context/CartContext';
-import { LanguageProvider } from './context/LanguageContext'; // <-- IMPORT BARU
+import { LanguageProvider } from './context/LanguageContext';
 import { Toaster } from 'react-hot-toast';
 import Pos from './pages/Pos';
 import AdminReports from './pages/AdminReports'; 
@@ -21,6 +22,10 @@ import Reupload from './pages/Reupload';
 import AdminSettingsSystem from './pages/AdminSettingsSystem';
 import Login from './pages/Login';
 import ProtectedRoute from './components/ProtectedRoute';
+
+// IMPORT KOMPONEN BARU
+import DynamicManifest from './components/DynamicManifest';
+import SplashScreen from './components/SplashScreen';
 
 function AppContent() {
   const location = useLocation();
@@ -60,10 +65,24 @@ function AppContent() {
 }
 
 function App() {
+  const [showSplash, setShowSplash] = useState(true);
+
+  // Cek apakah user baru pertama kali buka di sesi ini
+  useEffect(() => {
+    const hasVisited = sessionStorage.getItem('hasVisited');
+    if (hasVisited) {
+      setShowSplash(false);
+    } else {
+      sessionStorage.setItem('hasVisited', 'true');
+    }
+  }, []);
+
   return (
     <CartProvider>
-      <LanguageProvider> {/* <-- BUNGKUS DISINI */}
+      <LanguageProvider>
+        {showSplash && <SplashScreen onFinish={() => setShowSplash(false)} />}
         <BrowserRouter>
+          <DynamicManifest />
           <AppContent />
         </BrowserRouter>
       </LanguageProvider>
