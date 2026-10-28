@@ -2,15 +2,14 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import AdminLayout from '../components/layout/AdminLayout';
 import toast from 'react-hot-toast';
-import { Plus, Edit, Trash2, Bike, Phone, Upload, X, ShieldCheck, User } from 'lucide-react';
+import { Plus, Edit, Trash2, Bike, Phone, Upload, X, ShieldCheck, User, Lock } from 'lucide-react';
 
 export default function AdminCouriers() {
   const [couriers, setCouriers] = useState<any[]>([]);
-  
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formData, setFormData] = useState({ 
     id: '', name: '', phone: '', plate_number: '', photo_url: '', 
-    vehicle_type: '', is_active: true 
+    vehicle_type: '', is_active: true, pin: '' 
   });
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -38,11 +37,12 @@ export default function AdminCouriers() {
         plate_number: courier.plate_number || '',
         photo_url: courier.photo_url || '',
         vehicle_type: courier.vehicle_type || '',
-        is_active: courier.is_active ?? true
+        is_active: courier.is_active ?? true,
+        pin: courier.pin || ''
       });
       setPreviewUrl(courier.photo_url || null);
     } else {
-      setFormData({ id: '', name: '', phone: '', plate_number: '', photo_url: '', vehicle_type: '', is_active: true });
+      setFormData({ id: '', name: '', phone: '', plate_number: '', photo_url: '', vehicle_type: '', is_active: true, pin: '' });
       setPreviewUrl(null);
     }
     setPhotoFile(null);
@@ -74,7 +74,8 @@ export default function AdminCouriers() {
         plate_number: formData.plate_number,
         photo_url: finalPhotoUrl,
         vehicle_type: formData.vehicle_type,
-        is_active: formData.is_active
+        is_active: formData.is_active,
+        pin: formData.pin
       };
 
       if (formData.id) {
@@ -92,14 +93,12 @@ export default function AdminCouriers() {
     }
   };
 
-  // Hitung Statistik
   const totalKurir = couriers.length;
   const siapJalan = couriers.filter(c => c.is_active).length;
-  const sedangJalan = totalKurir - siapJalan; // Dummy logic
+  const sedangJalan = totalKurir - siapJalan;
 
   return (
     <AdminLayout>
-      {/* HEADER */}
       <div className="flex justify-between items-start mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-800">Manajemen Kurir</h1>
@@ -110,7 +109,6 @@ export default function AdminCouriers() {
         </button>
       </div>
 
-      {/* STATS BAR */}
       <div className="bg-white rounded-full px-5 py-3 shadow-sm border border-gray-100 mb-6 flex justify-between items-center max-w-md">
         <div className="flex items-center gap-2">
           <span className="w-2.5 h-2.5 rounded-full bg-orange-400"></span>
@@ -122,7 +120,6 @@ export default function AdminCouriers() {
         </div>
       </div>
 
-      {/* LIST KURIR */}
       <div className="grid grid-cols-1 gap-4 max-w-3xl">
         {couriers.map((c) => (
           <div key={c.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
@@ -169,41 +166,22 @@ export default function AdminCouriers() {
         ))}
       </div>
 
-      {/* FOOTER INFO */}
-      <div className="mt-6 bg-gray-50 border border-gray-200 rounded-2xl p-4 flex gap-3 items-start max-w-3xl">
-        <ShieldCheck className="text-orange-500 shrink-0 mt-0.5" size={20} />
-        <div>
-          <p className="font-bold text-sm text-gray-800">Standar Kurir Kedai Kuning</p>
-          <p className="text-xs text-gray-500 mt-1 leading-relaxed">
-            Pastikan kurir selalu mengenakan jaket keselamatan dan membawa tas insulasi termal agar pesanan tiba dalam keadaan hangat dan higienis.
-          </p>
-        </div>
-      </div>
-
-      {/* MODAL TAMBAH/EDIT KURIR (Persis Referensi) */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-3xl w-full max-w-sm overflow-hidden flex flex-col max-h-[95vh]">
             
-            {/* HEADER MODAL */}
             <div className="bg-orange-50 p-5 flex justify-between items-start">
               <div>
                 <p className="text-[10px] font-bold text-orange-500 uppercase tracking-wider mb-0.5">Armada Baru</p>
-                <h2 className="font-bold text-xl text-gray-800">Tambah Kurir Baru</h2>
-                <p className="text-[10px] text-gray-500 mt-1">Lengkapi data kurir armada internal kedai</p>
+                <h2 className="font-bold text-xl text-gray-800">{formData.id ? 'Edit Kurir' : 'Tambah Kurir Baru'}</h2>
               </div>
               <button onClick={() => setIsModalOpen(false)} className="p-1.5 bg-white text-gray-400 rounded-full hover:bg-gray-100"><X size={16}/></button>
             </div>
 
-            {/* FORM BODY */}
             <form onSubmit={handleSave} className="p-5 space-y-4 overflow-y-auto">
               
-              {/* Upload Foto */}
               <div>
-                <div className="flex justify-between items-center mb-1">
-                  <label className="text-xs font-bold text-gray-700">Foto Profil Kurir</label>
-                  <span className="text-[9px] text-gray-400">Format JPG, PNG (Maks 2MB)</span>
-                </div>
+                <label className="text-xs font-bold text-gray-700 mb-1 block">Foto Profil Kurir</label>
                 {previewUrl ? (
                   <div className="relative inline-block">
                     <img src={previewUrl} alt="Preview" className="w-16 h-16 rounded-full object-cover border-2 border-orange-200" />
@@ -215,14 +193,11 @@ export default function AdminCouriers() {
                     <div className="bg-white p-2 rounded-lg text-orange-400 shadow-sm"><Upload size={20} /></div>
                     <div className="flex-1">
                       <p className="text-xs font-bold text-gray-700">Unggah Foto Profil</p>
-                      <p className="text-[10px] text-gray-400">Ketik untuk mengambil foto atau pilih galeri</p>
                     </div>
-                    <button type="button" className="bg-white text-[10px] font-bold text-orange-500 border border-orange-200 px-3 py-1 rounded-md">Pilih</button>
                   </div>
                 )}
               </div>
 
-              {/* Nama Lengkap */}
               <div>
                 <label className="text-xs font-bold text-gray-700 mb-1 block">Nama Lengkap Kurir <span className="text-red-500">*</span></label>
                 <div className="relative">
@@ -237,7 +212,6 @@ export default function AdminCouriers() {
                 </div>
               </div>
 
-              {/* No HP */}
               <div>
                 <label className="text-xs font-bold text-gray-700 mb-1 block">Nomor WhatsApp / HP <span className="text-red-500">*</span></label>
                 <div className="relative flex items-center bg-gray-50 border border-gray-200 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-orange-500">
@@ -252,15 +226,10 @@ export default function AdminCouriers() {
                     required 
                   />
                 </div>
-                <p className="text-[10px] text-gray-400 mt-1 flex items-center gap-1"><span className="bg-gray-200 text-gray-500 rounded-full w-3 h-3 flex items-center justify-center text-[8px]">i</span> Digunakan untuk integrasi koordinasi orderan otomatis</p>
               </div>
 
-              {/* Plat Motor */}
               <div>
-                <div className="flex justify-between items-center mb-1">
-                  <label className="text-xs font-bold text-gray-700">Plat Nomor Kendaraan <span className="text-red-500">*</span></label>
-                  <span className="text-[9px] text-orange-500 font-bold">FORMAT RESMI</span>
-                </div>
+                <label className="text-xs font-bold text-gray-700 mb-1 block">Plat Nomor Kendaraan <span className="text-red-500">*</span></label>
                 <div className="relative">
                   <Bike className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
                   <input 
@@ -273,40 +242,19 @@ export default function AdminCouriers() {
                 </div>
               </div>
 
-              {/* Jenis Motor */}
-              <div>
-                <div className="flex justify-between items-center mb-1">
-                  <label className="text-xs font-bold text-gray-700">Jenis / Merk Motor</label>
-                  <span className="text-[9px] text-gray-400">(Opsional)</span>
-                </div>
-                <div className="relative">
-                  <Bike className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-                  <input 
-                    value={formData.vehicle_type} 
-                    onChange={e => setFormData({...formData, vehicle_type: e.target.value})} 
-                    placeholder="Contoh: Honda Vario 160 Hitam" 
-                    className="w-full bg-gray-50 border border-gray-200 p-2.5 pl-9 rounded-xl text-sm text-gray-700 focus:ring-2 focus:ring-orange-500 outline-none" 
-                  />
-                </div>
+              {/* INPUT PIN BARU */}
+              <div className="bg-orange-50 border border-orange-100 rounded-xl p-3">
+                <label className="text-xs font-bold text-gray-800 mb-1 block flex items-center gap-1"><Lock size={12}/> PIN Rahasia Kurir (4 Angka)</label>
+                <input 
+                  type="text"
+                  maxLength={4}
+                  value={formData.pin} 
+                  onChange={e => setFormData({...formData, pin: e.target.value.replace(/\D/g, '')})} 
+                  placeholder="Contoh: 1234" 
+                  className="w-full bg-white border border-gray-200 p-2.5 rounded-xl text-sm font-bold tracking-widest focus:ring-2 focus:ring-orange-500 outline-none" 
+                />
               </div>
 
-              {/* Toggle Status */}
-              <div className="bg-orange-50 border border-orange-100 rounded-xl p-3 flex justify-between items-center">
-                <div>
-                  <p className="text-xs font-bold text-gray-800">Status Langsung Siap</p>
-                  <p className="text-[10px] text-gray-500">Kurir dapat langsung menerima order</p>
-                </div>
-                <label className="toggle-switch">
-                  <input 
-                    type="checkbox" 
-                    checked={formData.is_active} 
-                    onChange={e => setFormData({...formData, is_active: e.target.checked})} 
-                  />
-                  <span className="slider"></span>
-                </label>
-              </div>
-
-              {/* BUTTON AKSI */}
               <div className="flex gap-2 pt-2">
                 <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 bg-gray-100 py-3 rounded-xl font-bold text-sm text-gray-600 hover:bg-gray-200 transition-colors">Batal</button>
                 <button type="submit" className="flex-1 bg-[#F59E0B] text-white py-3 rounded-xl font-bold text-sm hover:bg-[#D97706] transition-colors shadow-md flex justify-center items-center gap-2">
