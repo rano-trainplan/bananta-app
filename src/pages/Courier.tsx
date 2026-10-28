@@ -14,7 +14,6 @@ export default function Courier() {
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [detailOrder, setDetailOrder] = useState<any>(null); 
   const [proofPhoto, setProofPhoto] = useState<File | null>(null);
-  
   const [activeTab, setActiveTab] = useState<'tugas' | 'riwayat' | 'pendapatan'>('tugas');
 
   // STATE SESSION
@@ -36,6 +35,7 @@ export default function Courier() {
   const [startDate, setStartDate] = useState(todayStr);
   const [endDate, setEndDate] = useState(todayStr);
   const [totalIncome, setTotalIncome] = useState(0);
+  const [filterType, setFilterType] = useState<'hari' | 'minggu' | 'bulan'>('hari');
 
   useEffect(() => {
     async function checkSession() {
@@ -103,8 +103,6 @@ export default function Courier() {
   };
 
   async function fetchData() {
-    
-    
     const { data: active } = await supabase
       .from('orders')
       .select('*, order_items(*)')
@@ -125,7 +123,6 @@ export default function Courier() {
 
     const income = (history || []).reduce((sum, order) => sum + (order.shipping_cost || 0), 0);
     setTotalIncome(income);
-   
   }
 
   const handleTakeTask = async (orderId: string) => {
@@ -298,10 +295,9 @@ export default function Courier() {
     );
   }
 
-  // --- LAYAR DASHBOARD KURIR (DESAIN BARU) ---
+  // --- LAYAR DASHBOARD KURIR ---
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
-      {/* HEADER ATAS */}
       <header className="bg-white p-4 shadow-sm flex justify-between items-center sticky top-0 z-10 border-b border-gray-100">
         <div className="flex items-center gap-3">
           <div className="relative">
@@ -493,33 +489,36 @@ export default function Courier() {
               <div className="flex gap-2">
                 <button 
                   onClick={() => {
+                    setFilterType('hari');
                     const today = new Date().toISOString().split('T')[0];
                     setStartDate(today);
                     setEndDate(today);
                   }} 
-                  className="bg-orange-500 text-white text-[10px] font-bold px-3 py-1.5 rounded-lg"
+                  className={`text-[10px] font-bold px-3 py-1.5 rounded-lg transition-colors ${filterType === 'hari' ? 'bg-orange-500 text-white shadow-sm' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
                 >
                   Hari Ini
                 </button>
                 <button 
                   onClick={() => {
+                    setFilterType('minggu');
                     const today = new Date();
-                    const firstDay = new Date(today.setDate(today.getDate() - today.getDay())); // Minggu ini
+                    const firstDay = new Date(today.setDate(today.getDate() - today.getDay()));
                     setStartDate(firstDay.toISOString().split('T')[0]);
                     setEndDate(new Date().toISOString().split('T')[0]);
                   }} 
-                  className="bg-gray-100 text-gray-600 text-[10px] font-bold px-3 py-1.5 rounded-lg hover:bg-gray-200"
+                  className={`text-[10px] font-bold px-3 py-1.5 rounded-lg transition-colors ${filterType === 'minggu' ? 'bg-orange-500 text-white shadow-sm' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
                 >
                   Minggu Ini
                 </button>
                 <button 
                   onClick={() => {
+                    setFilterType('bulan');
                     const today = new Date();
-                    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1); // Tanggal 1 bulan ini
+                    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
                     setStartDate(firstDay.toISOString().split('T')[0]);
                     setEndDate(new Date().toISOString().split('T')[0]);
                   }} 
-                  className="bg-gray-100 text-gray-600 text-[10px] font-bold px-3 py-1.5 rounded-lg hover:bg-gray-200"
+                  className={`text-[10px] font-bold px-3 py-1.5 rounded-lg transition-colors ${filterType === 'bulan' ? 'bg-orange-500 text-white shadow-sm' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
                 >
                   Bulan Ini
                 </button>
@@ -558,7 +557,7 @@ export default function Courier() {
         )}
       </div>
 
-      {/* MODAL DETAIL PESANAN (DESAIN BARU) */}
+      {/* MODAL DETAIL PESANAN */}
       {detailOrder && (
         <div className="fixed inset-0 bg-black/60 flex items-end sm:items-center justify-center p-0 sm:p-4 z-50">
           <div className="bg-white w-full max-w-md rounded-t-3xl sm:rounded-3xl overflow-hidden flex flex-col shadow-2xl animate-in slide-in-from-bottom-10 max-h-[90vh]">

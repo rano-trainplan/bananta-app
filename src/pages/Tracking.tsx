@@ -195,7 +195,7 @@ export default function Tracking() {
             <div>
               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Alamat Tujuan</p>
               <p className="text-xs font-bold text-gray-800">{order.address}</p>
-              <p className="text-[10px] text-gray-500 mt-1">Tower B, Lantai 5, Unit 502 (Titip security toko jika tidak ada)</p>
+              <p className="text-[10px] text-gray-500 mt-1"></p>
             </div>
           </div>
           <div className="border-t border-dashed pt-3 flex justify-between items-center text-xs">
