@@ -60,5 +60,12 @@
   "status_delivering": "Order Delivered by Courier",
   "status_done": "Order Completed",
   "destination": "Destination Address",
-  "back_home": "Back to Home"
+  "back_home": "Back to Home",
+  
+  "cat_all": "All",
+  "cat_food": "Food",
+  "cat_drink": "Drink",
+  "cat_snack": "Snack",
+  "loading_menu": "Loading menu...",
+  "menu_not_found": "Menu not found."
 }

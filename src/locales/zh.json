@@ -60,5 +60,12 @@
   "status_delivering": "快递员正在配送订单",
   "status_done": "订单已完成",
   "destination": "目的地地址",
-  "back_home": "返回首页"
+  "back_home": "返回首页",
+  
+  "cat_all": "全部",
+  "cat_food": "食物",
+  "cat_drink": "饮料",
+  "cat_snack": "小吃",
+  "loading_menu": "正在加载菜单...",
+  "menu_not_found": "找不到菜单。"
 }

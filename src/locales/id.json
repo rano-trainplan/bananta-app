@@ -60,5 +60,12 @@
   "status_delivering": "Pesanan Diantar Kurir",
   "status_done": "Pesanan Selesai",
   "destination": "Alamat Tujuan",
-  "back_home": "Kembali ke Beranda"
+  "back_home": "Kembali ke Beranda",
+  
+  "cat_all": "Semua",
+  "cat_food": "Makanan",
+  "cat_drink": "Minuman",
+  "cat_snack": "Snack",
+  "loading_menu": "Memuat menu...",
+  "menu_not_found": "Menu tidak ditemukan."
 }

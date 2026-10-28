@@ -5,7 +5,7 @@ import BottomNav from '../components/layout/BottomNav';
 import { supabase } from '../lib/supabase';
 import type { Product } from '../types';
 import { useCart } from '../context/CartContext';
-import { useLanguage } from '../context/LanguageContext'; // <-- IMPORT
+import { useLanguage } from '../context/LanguageContext';
 
 export default function Home() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -16,7 +16,7 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState('');
 
   const { addToCart } = useCart();
-  const { t } = useLanguage(); // <-- PANGGIL HOOK
+  const { language, setLanguage, t } = useLanguage();
 
   const isFriday = new Date().getDay() === 5;
 
@@ -81,21 +81,15 @@ export default function Home() {
             <div className="flex items-center gap-1 overflow-hidden relative">
               <MapPin size={10} className="text-gray-500 shrink-0"/> 
               
-              {/* Marquee Wrapper */}
               <div className="overflow-hidden whitespace-nowrap w-full relative">
                 <div className="animate-marquee">
-                  <span className="text-xs text-gray-500 pr-8">
-                    {storeSettings?.store_address || 'Lelilef Waebulen, Depan Bank BRI'}
-                  </span>
-                  <span className="text-xs text-gray-500 pr-8">
-                    {storeSettings?.store_address || 'Lelilef Waebulen, Depan Bank BRI'}
-                  </span>
+                  <span className="text-xs text-gray-500 pr-8">{storeSettings?.store_address || 'Lelilef Waebulen, Depan Bank BRI'}</span>
+                  <span className="text-xs text-gray-500 pr-8">{storeSettings?.store_address || 'Lelilef Waebulen, Depan Bank BRI'}</span>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* AVATAR USER */}
           <div className="w-10 h-10 bg-gray-200 rounded-full overflow-hidden shrink-0">
             <img src="https://ui-avatars.com/api/?name=User&background=random" alt="User" />
           </div>
@@ -115,12 +109,19 @@ export default function Home() {
       </header>
 
       <div className="px-4">
-        {/* BANNER PROMO */}
+        {/* BANNER PROMO DENGAN TOMBOL BAHASA */}
         <div 
           className="rounded-2xl p-5 text-white mb-6 relative overflow-hidden shadow-lg"
           style={{ background: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)' }}
         >
-          <div className="relative z-10">
+          {/* TOMBOL BAHASA DI POJOK KANAN ATAS */}
+          <div className="absolute top-4 right-4 z-20 flex gap-1 bg-black/20 p-1 rounded-lg backdrop-blur-sm">
+            <button onClick={() => setLanguage('id')} className={`text-sm px-1.5 py-0.5 rounded transition-colors ${language === 'id' ? 'bg-white shadow-sm' : 'hover:bg-white/20'}`}>🇮🇩</button>
+            <button onClick={() => setLanguage('en')} className={`text-sm px-1.5 py-0.5 rounded transition-colors ${language === 'en' ? 'bg-white shadow-sm' : 'hover:bg-white/20'}`}>🇬🇧</button>
+            <button onClick={() => setLanguage('zh')} className={`text-sm px-1.5 py-0.5 rounded transition-colors ${language === 'zh' ? 'bg-white shadow-sm' : 'hover:bg-white/20'}`}>🇨🇳</button>
+          </div>
+
+          <div className="relative z-10 pr-16">
             {isFriday ? (
               <>
                 <h2 className="font-bold text-lg mb-1">{storeSettings?.promo_title_friday || t('promo_title_friday')}</h2>
@@ -141,17 +142,22 @@ export default function Home() {
 
         {/* KATEGORI */}
         <div className="flex gap-2 overflow-x-auto pb-4 scrollbar-hide mb-2">
-          {['Semua', 'Makanan', 'Minuman', 'Snack'].map((cat) => (
+          {[
+            { id: 'Semua', label: t('cat_all') },
+            { id: 'Makanan', label: t('cat_food') },
+            { id: 'Minuman', label: t('cat_drink') },
+            { id: 'Snack', label: t('cat_snack') },
+          ].map((cat) => (
             <button 
-              key={cat}
-              onClick={() => setActiveCategory(cat)}
+              key={cat.id}
+              onClick={() => setActiveCategory(cat.id)}
               className={`px-5 py-2 rounded-xl text-sm font-semibold whitespace-nowrap transition-colors ${
-                activeCategory === cat 
+                activeCategory === cat.id 
                   ? 'bg-[#F59E0B] text-white' 
                   : 'bg-white text-gray-600 shadow-sm border border-gray-100'
               }`}
             >
-              {cat}
+              {cat.label}
             </button>
           ))}
         </div>
@@ -165,11 +171,11 @@ export default function Home() {
 
         {/* LIST PRODUK */}
         {loading ? (
-          <p className="text-center text-gray-500 py-10">Memuat menu...</p>
+          <p className="text-center text-gray-500 py-10">{t('loading_menu')}</p>
         ) : (
           <div className="space-y-4">
             {filteredProducts.length === 0 ? (
-              <p className="text-center text-gray-500 py-10">Menu tidak ditemukan.</p>
+              <p className="text-center text-gray-500 py-10">{t('menu_not_found')}</p>
             ) : (
               filteredProducts.map((product) => {
                 const isFridayPrice = isFriday && product.price_friday;
