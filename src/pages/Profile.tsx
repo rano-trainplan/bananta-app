@@ -3,9 +3,11 @@ import { ArrowLeft, MapPin, Phone, Clock, HelpCircle, Bike, FileText, CheckCircl
 import BottomNav from '../components/layout/BottomNav';
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { useLanguage } from '../context/LanguageContext'; // <-- IMPORT BARU
 
 export default function Profile() {
   const [storeSettings, setStoreSettings] = useState<any>(null);
+  const { language, setLanguage } = useLanguage(); // <-- PANGGIL HOOK
 
   useEffect(() => {
     async function fetchSettings() {
@@ -86,6 +88,13 @@ export default function Profile() {
             <a href={`https://wa.me/${waNumber}`} target="_blank" rel="noreferrer" className="flex-1 bg-green-500 text-white py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 hover:bg-green-600 shadow-md transition-colors">
               <MessageCircle size={14} /> WhatsApp
             </a>
+          </div>
+
+          {/* TOMBOL GANTI BAHASA */}
+          <div className="flex w-full gap-2 mt-3 relative z-10">
+            <button onClick={() => setLanguage('id')} className={`flex-1 py-2 rounded-xl text-xs font-bold border transition-colors ${language === 'id' ? 'bg-orange-500 text-white border-orange-500' : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'}`}>🇮🇩 Indonesia</button>
+            <button onClick={() => setLanguage('en')} className={`flex-1 py-2 rounded-xl text-xs font-bold border transition-colors ${language === 'en' ? 'bg-orange-500 text-white border-orange-500' : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'}`}>🇬🇧 English</button>
+            <button onClick={() => setLanguage('zh')} className={`flex-1 py-2 rounded-xl text-xs font-bold border transition-colors ${language === 'zh' ? 'bg-orange-500 text-white border-orange-500' : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'}`}>🇨🇳 中文</button>
           </div>
         </div>
 

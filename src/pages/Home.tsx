@@ -5,11 +5,13 @@ import BottomNav from '../components/layout/BottomNav';
 import { supabase } from '../lib/supabase';
 import type { Product } from '../types';
 import { useCart } from '../context/CartContext';
+import { useLanguage } from '../context/LanguageContext';
 
 export default function Home() {
   const [products, setProducts] = useState<Product[]>([]);
   const [storeSettings, setStoreSettings] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const { t } = useLanguage();
   
   const [activeCategory, setActiveCategory] = useState('Semua');
   const [searchQuery, setSearchQuery] = useState('');
@@ -108,7 +110,7 @@ export default function Home() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
           <input 
             type="text" 
-            placeholder="Cari makanan atau minuman favoritmu..." 
+            placeholder={t('search_placeholder')} 
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full bg-gray-100 rounded-xl py-3 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-[#F59E0B]" 
@@ -160,8 +162,8 @@ export default function Home() {
 
         <div className="flex justify-between items-end mb-4 mt-2">
           <div>
-            <h3 className="font-bold text-lg">Menu Pilihan</h3>
-            <p className="text-xs text-gray-500">Pilih menu yang ingin dipesan</p>
+            <h3 className="font-bold text-lg">{t('menu_title')}</h3>
+            <p className="text-xs text-gray-500">{t('menu_sub')}</p>
           </div>
         </div>
 
