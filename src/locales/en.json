@@ -72,5 +72,23 @@
   "nav_home": "Home",
   "nav_history": "Orders",
   "nav_cart": "Cart",
-  "nav_profile": "Account"
+  "nav_profile": "Account",
+
+    "history_title": "Order History",
+  "empty_history": "No Order History Yet",
+  "empty_history_sub": "You have never placed an order at Bananta Sultan on this device. Our delicious food is ready to be delivered to your place!",
+  "order_now_btn": "Order Now",
+  "fav_title": "BANANTA SULTAN LOCAL FAVORITE",
+  "fav_sub": "Spicy and crunchy...",
+  "advantages_title": "Advantages of Ordering Online at Bananta Sultan",
+  "adv_1_title": "Fast Delivery",
+  "adv_1_sub": "Delivered directly by the restaurant's official courier in warm & hygienic condition.",
+  "adv_2_title": "Very Practical Payment",
+  "adv_2_sub": "Full support for instant QRIS, e-wallets, and automatic bank transfers.",
+  "adv_3_title": "Accurate Live Tracking",
+  "adv_3_sub": "Track the order's journey live from the kitchen wok to your front door.",
+  "help_question": "Having trouble with your account?",
+  "contact_help": "Contact Support",
+  "status_finished": "Finished",
+  "status_rejected": "Rejected"
 }
