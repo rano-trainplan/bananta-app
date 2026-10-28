@@ -3,11 +3,13 @@ import { useParams, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { Phone, MessageCircle, Store, Bike, CheckCircle, Clock, ChefHat, AlertTriangle, ArrowLeft, Navigation } from 'lucide-react';
 import BottomNav from '../components/layout/BottomNav';
+import { useLanguage } from '../context/LanguageContext'; // <-- IMPORT
 
 export default function Tracking() {
   const { orderId } = useParams();
   const [order, setOrder] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const { t } = useLanguage(); // <-- PANGGIL HOOK
 
   useEffect(() => {
     async function fetchOrder() {
@@ -35,7 +37,6 @@ export default function Tracking() {
   const getStepStatus = (stepKey: string) => {
     const stepIndex = statusOrder.indexOf(stepKey);
     
-    // JIKA SUDAH SELESAI, SEMUA HIJAU
     if (order.status === 'Selesai') return 'done'; 
     
     if (stepIndex < currentIndex) return 'done'; 
@@ -54,7 +55,7 @@ export default function Tracking() {
           <Link to="/" className="p-2 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors"><ArrowLeft size={18}/></Link>
           <div>
             <p className="text-[10px] font-bold text-orange-500 uppercase tracking-wider">Live Delivery</p>
-            <h1 className="text-lg font-bold text-gray-800">Pesanan Dikirim</h1>
+            <h1 className="text-lg font-bold text-gray-800">{t('tracking_title')}</h1>
           </div>
         </div>
         <p className="text-xs font-bold text-gray-400 bg-gray-100 px-2 py-1 rounded">#{order.id.slice(0,8)}</p>
@@ -66,10 +67,10 @@ export default function Tracking() {
           <div className="bg-red-50 border border-red-200 p-4 rounded-xl">
             <div className="flex items-center gap-2 mb-2">
               <AlertTriangle className="text-red-500" size={20} />
-              <p className="font-bold text-red-600">Pembayaran Ditolak</p>
+              <p className="font-bold text-red-600">{t('order_rejected')}</p>
             </div>
             <p className="text-sm text-red-800 mb-3">Bukti transfer tidak valid atau buram. Silakan upload ulang bukti yang benar.</p>
-            <Link to={`/reupload/${order.id}`} className="block text-center bg-red-500 text-white py-2 rounded-lg font-bold text-sm">Upload Ulang Bukti</Link>
+            <Link to={`/reupload/${order.id}`} className="block text-center bg-red-500 text-white py-2 rounded-lg font-bold text-sm">{t('reupload_btn')}</Link>
           </div>
         )}
 
@@ -110,7 +111,7 @@ export default function Tracking() {
               />
               <div className="flex-1">
                 <div className="flex items-center gap-1.5">
-                  <h3 className="font-bold text-sm text-gray-800">{order.courier_name || 'Mencari Kurir...'}</h3>
+                  <h3 className="font-bold text-sm text-gray-800">{order.courier_name || t('courier_search')}</h3>
                   <span className="text-[10px] text-gray-500 flex items-center gap-0.5">⭐ 4.9</span>
                 </div>
                 <p className="text-[10px] text-gray-500 font-mono mt-0.5 bg-gray-100 px-1.5 py-0.5 rounded inline-block">{order.courier_plate || '-'} • Vario Hitam</p>
@@ -130,17 +131,17 @@ export default function Tracking() {
         {/* TIMELINE LACAK */}
         <div className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100">
           <div className="flex justify-between items-center mb-5">
-            <h3 className="font-bold text-sm text-gray-800">Lacak Perjalanan Pesanan</h3>
+            <h3 className="font-bold text-sm text-gray-800">{t('tracking_timeline')}</h3>
             <span className="text-[9px] font-bold text-green-600 bg-green-50 px-2 py-1 rounded flex items-center gap-1"><span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span> Real-time</span>
           </div>
           
           <div className="relative pl-6 space-y-6 before:content-[''] before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-gray-100">
             {[
-              { key: 'Dibuat', label: 'Pesanan Diterima', sub: 'Pesanan telah masuk ke sistem dapur', icon: Clock, time: order.created_at },
-              { key: 'Validasi', label: 'Pembayaran Divalidasi', sub: 'Transaksi otomatis terverifikasi', icon: CheckCircle, time: order.updated_at },
-              { key: 'Masak', label: 'Pesanan Sedang Dibuat', sub: 'Makanan disiapkan & higienis', icon: ChefHat, time: order.updated_at },
-              { key: 'Dikirim', label: 'Pesanan Diantar Kurir', sub: `Pesanan diantar ke alamat`, icon: Bike, time: order.updated_at },
-              { key: 'Selesai', label: 'Pesanan Selesai', sub: 'Konfirmasi penerimaan makanan', icon: CheckCircle, time: order.updated_at },
+              { key: 'Dibuat', label: t('status_created'), sub: 'Pesanan telah masuk ke sistem dapur', icon: Clock, time: order.created_at },
+              { key: 'Validasi', label: t('status_validated'), sub: 'Transaksi otomatis terverifikasi', icon: CheckCircle, time: order.updated_at },
+              { key: 'Masak', label: t('status_cooking'), sub: 'Makanan disiapkan & higienis', icon: ChefHat, time: order.updated_at },
+              { key: 'Dikirim', label: t('status_delivering'), sub: `Pesanan diantar ke alamat`, icon: Bike, time: order.updated_at },
+              { key: 'Selesai', label: t('status_done'), sub: 'Konfirmasi penerimaan makanan', icon: CheckCircle, time: order.updated_at },
             ].map((step) => {
               const status = getStepStatus(step.key);
               const Icon = step.icon;
@@ -193,9 +194,8 @@ export default function Tracking() {
           <div className="flex items-start gap-3">
             <div className="bg-orange-50 p-2 rounded-full text-orange-500 mt-0.5"><Navigation size={16}/></div>
             <div>
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Alamat Tujuan</p>
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">{t('destination')}</p>
               <p className="text-xs font-bold text-gray-800">{order.address}</p>
-              <p className="text-[10px] text-gray-500 mt-1"></p>
             </div>
           </div>
           <div className="border-t border-dashed pt-3 flex justify-between items-center text-xs">
@@ -205,7 +205,7 @@ export default function Tracking() {
         </div>
 
         <Link to="/" className="block text-center text-sm font-bold bg-[#F59E0B] text-white py-3.5 rounded-xl shadow-lg hover:bg-[#D97706] transition-colors mb-4">
-          Kembali ke Beranda <ArrowLeft size={16} className="inline ml-1 rotate-180"/>
+          {t('back_home')} <ArrowLeft size={16} className="inline ml-1 rotate-180"/>
         </Link>
       </div>
       <BottomNav />
