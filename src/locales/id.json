@@ -90,5 +90,8 @@
   "help_question": "Ada kendala dengan akunmu?",
   "contact_help": "Hubungi Bantuan",
   "status_finished": "Selesai",
-  "status_rejected": "Ditolak"
+  "status_rejected": "Ditolak",
+
+  "click_to_copy": "Klik kartu buat copy No. Rek",
+  "total_transfer": "Total Transfer:"
 }

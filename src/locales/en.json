@@ -90,5 +90,8 @@
   "help_question": "Having trouble with your account?",
   "contact_help": "Contact Support",
   "status_finished": "Finished",
-  "status_rejected": "Rejected"
+  "status_rejected": "Rejected",
+
+  "click_to_copy": "Click card to copy Account No.",
+  "total_transfer": "Total Transfer:"
 }

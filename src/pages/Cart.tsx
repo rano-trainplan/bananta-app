@@ -241,9 +241,9 @@ export default function Cart() {
                     </div>
                   )}
 
-                  <p className="text-center text-sm text-gray-500">Klik kartu buat copy No. Rek</p>
+                  <p className="text-center text-sm text-gray-500">{t('click_to_copy')}</p>
                   <div className="bg-gray-50 p-3 rounded-lg text-center border">
-                    <p className="text-sm font-bold text-gray-600">Total Transfer:</p>
+                    <p className="text-sm font-bold text-gray-600">{t('total_transfer')}</p>
                     <p className="text-xl font-bold text-[#F59E0B]">Rp {grandTotal.toLocaleString('id-ID')}</p>
                   </div>
                 </div>

@@ -90,5 +90,8 @@
   "help_question": "账户遇到问题？",
   "contact_help": "联系支持",
   "status_finished": "完成",
-  "status_rejected": "拒绝"
+  "status_rejected": "拒绝",
+
+  "click_to_copy": "点击卡片复制账号",
+  "total_transfer": "总转账金额："
 }
