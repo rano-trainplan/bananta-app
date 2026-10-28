@@ -19,12 +19,23 @@ export default function Admin() {
   const [endDate, setEndDate] = useState(today);
   const [filterStatus, setFilterStatus] = useState('Semua');
 
-   useEffect(() => {
+  // REALTIME LISTENER (Biar Admin Gak Perlu Refresh)
+  useEffect(() => {
     fetchOrders();
+    
+    const channel = supabase.channel('admin-orders-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => {
+        fetchOrders(); // Langsung tarik data baru tiap ada perubahan
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
   }, [startDate, endDate]);
 
   async function fetchOrders() {
-    setLoading(true);
+    // Jangan tampilkan loading spinner kalau cuma update realtime
+    if (orders.length === 0) setLoading(true); 
+    
     const { data, error } = await supabase
       .from('orders')
       .select('*, order_items(*)')
@@ -37,50 +48,56 @@ export default function Admin() {
     setLoading(false);
   }
 
-  
-
   const filteredOrders = orders.filter(o => {
     if (filterStatus === 'Semua') return true;
-    if (filterStatus === 'Diproses') return ['Validasi', 'Masak', 'Dikirim'].includes(o.status);
+    if (filterStatus === 'Diproses') return ['Validasi', 'Masak', 'Mencari Kurir', 'Dikirim'].includes(o.status);
     return o.status === filterStatus;
   });
 
-  const totalSelesai = orders.filter(o => o.status === 'Selesai');
-  const totalPendapatanSelesai = totalSelesai.reduce((sum, o) => sum + o.total_price, 0);
+
 
   const countSelesai = orders.filter(o => o.status === 'Selesai').length;
   const countDitolak = orders.filter(o => o.status === 'Ditolak').length;
-  const countDiproses = orders.filter(o => ['Validasi', 'Masak', 'Dikirim'].includes(o.status)).length;
+  const countDiproses = orders.filter(o => ['Validasi', 'Masak', 'Mencari Kurir', 'Dikirim'].includes(o.status)).length;
 
   const handleAcceptOrder = async (id: string) => {
     await supabase.from('orders').update({ status: 'Validasi' }).eq('id', id);
-    toast.success("Pesanan diterima!"); fetchOrders();
+    toast.success("Pesanan diterima!");
   };
 
   const handleValidatePayment = async (id: string) => {
     await supabase.from('orders').update({ status: 'Masak' }).eq('id', id);
-    toast.success("Pembayaran divalidasi! Lanjut masak."); setModalType(null); fetchOrders();
+    toast.success("Pembayaran divalidasi! Lanjut masak."); setModalType(null);
   };
 
   const handleRejectPayment = async (id: string) => {
     await supabase.from('orders').update({ status: 'Ditolak' }).eq('id', id);
-    toast.error("Minta upload ulang bukti TF."); setModalType(null); fetchOrders();
+    toast.error("Minta upload ulang bukti TF."); setModalType(null);
   };
 
-    const handleReleaseToCouriers = async (id: string) => {
+  const handleReleaseToCouriers = async (id: string) => {
     if (!confirm("Lepas pesanan ini ke semua kurir? (Siapa cepat, dia dapat)")) return;
     await supabase.from('orders').update({
       courier_id: null,
-      status: 'Mencari Kurir' // <--- UBAH INI
+      status: 'Mencari Kurir'
     }).eq('id', id);
     toast.success("Pesanan dilepas ke kurir!"); 
     setModalType(null); 
-    fetchOrders();
+  };
+
+  // Fungsi buat nentuin tampilan Badge Status
+  const renderStatusBadge = (status: string) => {
+    if (status === 'Selesai') return <span className="text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1 bg-green-100 text-green-700"><CheckCircle size={10}/> Selesai</span>;
+    if (status === 'Ditolak') return <span className="text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1 bg-red-100 text-red-700"><XCircle size={10}/> Ditolak</span>;
+    if (status === 'Mencari Kurir') return <span className="text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1 bg-orange-100 text-orange-700"><Clock size={10} className="animate-pulse"/> Mencari Kurir</span>;
+    if (status === 'Dikirim') return <span className="text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1 bg-blue-100 text-blue-700"><Truck size={10}/> Diambil Kurir</span>;
+    
+    return <span className="text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1 bg-gray-100 text-gray-700"><Clock size={10}/> {status}</span>;
   };
 
   return (
     <AdminLayout>
-      {/* TOP INFO */}
+      {/* TOP INFO & HEADER */}
       <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mb-6 flex justify-between items-center">
         <div className="flex items-center gap-3">
           <div className="bg-orange-100 p-2 rounded-xl text-orange-500"><Store size={24} /></div>
@@ -94,13 +111,12 @@ export default function Admin() {
         </span>
       </div>
 
-      {/* HEADER */}
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-800">Daftar Pesanan</h1>
         <p className="text-sm text-gray-500 mt-1">Kelola dan pantau seluruh transaksi pelanggan secara realtime.</p>
       </div>
 
-      {/* FILTER */}
+      {/* FILTER TANGGAL */}
       <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mb-4 flex flex-col md:flex-row gap-3 items-center justify-between">
         <div className="flex items-center gap-2 w-full md:w-auto bg-gray-50 px-4 py-2.5 rounded-xl border border-gray-200">
           <Filter size={16} className="text-gray-500" />
@@ -148,7 +164,6 @@ export default function Admin() {
         <div className="space-y-3">
           {filteredOrders.map((order) => {
             const isDitolak = order.status === 'Ditolak';
-            const isSelesai = order.status === 'Selesai';
             
             return (
               <div key={order.id} className={`bg-white rounded-xl shadow-sm border p-4 transition-all hover:shadow-md ${isDitolak ? 'border-red-200' : 'border-gray-200'}`}>
@@ -158,13 +173,7 @@ export default function Admin() {
                     <span className="bg-gray-100 text-gray-600 text-[10px] font-bold px-2 py-1 rounded">#{order.id.slice(0, 6)}</span>
                     <span className="text-xs text-gray-400 font-medium">{new Date(order.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} WIT</span>
                   </div>
-                  <span className={`text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1 ${
-                    isSelesai ? 'bg-green-100 text-green-700' : 
-                    isDitolak ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'
-                  }`}>
-                    {isSelesai ? <CheckCircle size={10} /> : isDitolak ? <XCircle size={10} /> : <Clock size={10} />}
-                    {order.status}
-                  </span>
+                  {renderStatusBadge(order.status)}
                 </div>
 
                 <div className="mb-4">
@@ -197,9 +206,13 @@ export default function Admin() {
                         <Truck size={14}/> Lepas ke Kurir
                       </button>
                     )}
-                    <button onClick={() => { setSelectedOrder(order); setModalType('detail'); }} className={`flex-1 sm:flex-none justify-center text-xs px-4 py-2 rounded-lg font-bold flex items-center gap-1 ${isDitolak ? 'bg-red-50 text-red-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
-                      <Eye size={14} /> Detail
-                    </button>
+                    
+                    {/* TOMBOL DETAIL BARU MUNCUL PAS SELESAI */}
+                    {order.status === 'Selesai' && (
+                      <button onClick={() => { setSelectedOrder(order); setModalType('detail'); }} className={`flex-1 sm:flex-none justify-center text-xs px-4 py-2 rounded-lg font-bold flex items-center gap-1 bg-gray-100 text-gray-600 hover:bg-gray-200`}>
+                        <Eye size={14} /> Detail
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -208,18 +221,7 @@ export default function Admin() {
         </div>
       )}
 
-      {/* FOOTER SUMMARY */}
-      {!loading && filteredOrders.length > 0 && (
-        <div className="mt-6 bg-orange-50 border border-orange-100 rounded-xl p-4 flex justify-between items-center">
-          <div>
-            <p className="text-[10px] font-bold text-orange-500 uppercase tracking-wider">Total Transaksi Selesai</p>
-            <p className="text-xs text-gray-500 mt-0.5">{totalSelesai.length} pesanan terverifikasi</p>
-          </div>
-          <p className="text-xl font-bold text-orange-600">Rp {totalPendapatanSelesai.toLocaleString('id-ID')}</p>
-        </div>
-      )}
-
-      {/* MODAL DETAIL */}
+      {/* MODAL DETAIL (MUNCUL PAS KLIK TOMBOL DETAIL) */}
       {modalType === 'detail' && selectedOrder && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-3xl w-full max-w-sm max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
@@ -237,17 +239,6 @@ export default function Admin() {
             </div>
 
             <div className="p-5 overflow-y-auto space-y-5 bg-gray-50/50">
-              <div className="bg-orange-50 border border-orange-100 rounded-xl p-4 flex justify-between items-center">
-                <div className="flex items-center gap-2">
-                  <div className="bg-orange-500 w-2.5 h-2.5 rounded-full animate-pulse"></div>
-                  <div>
-                    <p className="text-xs text-gray-600 font-semibold">Status Pesanan: Sedang Diproses</p>
-                    <p className="text-[10px] text-gray-500">({selectedOrder.status})</p>
-                  </div>
-                </div>
-                <span className="text-xs font-bold text-orange-600">{selectedOrder.status === 'Masak' ? 'Dimasak' : selectedOrder.status}</span>
-              </div>
-
               <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm space-y-3">
                 <div className="flex justify-between items-center">
                   <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Pelanggan</p>
@@ -274,7 +265,6 @@ export default function Admin() {
               <div>
                 <div className="flex justify-between items-end mb-2">
                   <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Rincian Menu ({selectedOrder.order_items?.length || 0} Item)</p>
-                  <p className="text-[10px] text-gray-400 font-medium">Porsi</p>
                 </div>
                 <div className="space-y-2">
                   {selectedOrder.order_items?.map((item: any, idx: number) => (
@@ -300,14 +290,9 @@ export default function Admin() {
             </div>
 
             <div className="p-4 border-t border-gray-100 bg-white flex gap-2">
-              <button onClick={() => setModalType(null)} className="px-4 py-3 bg-gray-100 text-gray-600 rounded-xl font-bold text-sm flex items-center gap-2 hover:bg-gray-200 transition-colors">
+              <button onClick={() => setModalType(null)} className="px-4 py-3 bg-gray-100 text-gray-600 rounded-xl font-bold text-sm flex items-center gap-2 hover:bg-gray-200 transition-colors w-full justify-center">
                 <ArrowLeft size={16}/> Tutup
               </button>
-              {selectedOrder.status === 'Masak' && (
-                <button onClick={() => { setModalType(null); handleReleaseToCouriers(selectedOrder.id); }} className="flex-1 bg-orange-500 text-white rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-orange-600 shadow-md transition-colors">
-                  <Truck size={16}/> Lepas ke Kurir
-                </button>
-              )}
             </div>
           </div>
         </div>
