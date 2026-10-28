@@ -4,7 +4,7 @@ import toast from 'react-hot-toast';
 import {
   Eye, X, Calendar, Filter, Store, CheckCircle,
   XCircle, Clock, Truck, MapPin, Phone, ArrowLeft,
-  User, 
+  User, Trash2, AlertTriangle
 } from 'lucide-react';
 import AdminLayout from '../components/layout/AdminLayout';
 
@@ -12,20 +12,21 @@ export default function Admin() {
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
-  const [modalType, setModalType] = useState<'detail' | 'proof' | null>(null);
+  const [modalType, setModalType] = useState<'detail' | 'proof' | 'cleanup' | null>(null);
 
   const today = new Date().toISOString().split('T')[0];
   const [startDate, setStartDate] = useState(today);
   const [endDate, setEndDate] = useState(today);
   const [filterStatus, setFilterStatus] = useState('Semua');
+  const [isDeleting, setIsDeleting] = useState(false);
 
-  // REALTIME LISTENER (Biar Admin Gak Perlu Refresh)
+  // REALTIME LISTENER
   useEffect(() => {
     fetchOrders();
     
     const channel = supabase.channel('admin-orders-realtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => {
-        fetchOrders(); // Langsung tarik data baru tiap ada perubahan
+        fetchOrders();
       })
       .subscribe();
 
@@ -33,7 +34,6 @@ export default function Admin() {
   }, [startDate, endDate]);
 
   async function fetchOrders() {
-    // Jangan tampilkan loading spinner kalau cuma update realtime
     if (orders.length === 0) setLoading(true); 
     
     const { data, error } = await supabase
@@ -48,13 +48,53 @@ export default function Admin() {
     setLoading(false);
   }
 
+  // FUNGSI BERSIHKAN BUKTI TF
+  const handleCleanup = async () => {
+    setIsDeleting(true);
+    try {
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      
+      const { data: oldOrders } = await supabase
+        .from('orders')
+        .select('id, payment_proof')
+        .not('payment_proof', 'is', null)
+        .lte('created_at', yesterday.toISOString());
+
+      if (!oldOrders || oldOrders.length === 0) {
+        toast.success("Tidak ada file bukti TF yang perlu dihapus.");
+        setModalType(null);
+        setIsDeleting(false);
+        return;
+      }
+
+      const fileNames = oldOrders.map(o => {
+        const urlParts = o.payment_proof.split('/');
+        return urlParts[urlParts.length - 1]; 
+      });
+
+      const { error: storageError } = await supabase.storage.from('uploads').remove(fileNames);
+      if (storageError) throw storageError;
+
+      const orderIds = oldOrders.map(o => o.id);
+      const { error: dbError } = await supabase.from('orders').update({ payment_proof: null }).in('id', orderIds);
+      if (dbError) throw dbError;
+
+      toast.success(`${fileNames.length} Bukti TF berhasil dihapus permanen!`);
+      setModalType(null);
+    } catch (error) {
+      console.error(error);
+      toast.error("Gagal membersihkan bukti TF.");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   const filteredOrders = orders.filter(o => {
     if (filterStatus === 'Semua') return true;
     if (filterStatus === 'Diproses') return ['Validasi', 'Masak', 'Mencari Kurir', 'Dikirim'].includes(o.status);
     return o.status === filterStatus;
   });
-
-
 
   const countSelesai = orders.filter(o => o.status === 'Selesai').length;
   const countDitolak = orders.filter(o => o.status === 'Ditolak').length;
@@ -85,7 +125,6 @@ export default function Admin() {
     setModalType(null); 
   };
 
-  // Fungsi buat nentuin tampilan Badge Status
   const renderStatusBadge = (status: string) => {
     if (status === 'Selesai') return <span className="text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1 bg-green-100 text-green-700"><CheckCircle size={10}/> Selesai</span>;
     if (status === 'Ditolak') return <span className="text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1 bg-red-100 text-red-700"><XCircle size={10}/> Ditolak</span>;
@@ -111,9 +150,17 @@ export default function Admin() {
         </span>
       </div>
 
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">Daftar Pesanan</h1>
-        <p className="text-sm text-gray-500 mt-1">Kelola dan pantau seluruh transaksi pelanggan secara realtime.</p>
+      <div className="flex justify-between items-end mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-800">Daftar Pesanan</h1>
+          <p className="text-sm text-gray-500 mt-1">Kelola dan pantau seluruh transaksi pelanggan secara realtime.</p>
+        </div>
+        <button 
+          onClick={() => setModalType('cleanup')} 
+          className="bg-red-50 text-red-600 border border-red-200 px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2 hover:bg-red-100 transition-colors"
+        >
+          <Trash2 size={16}/> Bersihkan Storage
+        </button>
       </div>
 
       {/* FILTER TANGGAL */}
@@ -207,7 +254,6 @@ export default function Admin() {
                       </button>
                     )}
                     
-                    {/* TOMBOL DETAIL BARU MUNCUL PAS SELESAI */}
                     {order.status === 'Selesai' && (
                       <button onClick={() => { setSelectedOrder(order); setModalType('detail'); }} className={`flex-1 sm:flex-none justify-center text-xs px-4 py-2 rounded-lg font-bold flex items-center gap-1 bg-gray-100 text-gray-600 hover:bg-gray-200`}>
                         <Eye size={14} /> Detail
@@ -221,7 +267,7 @@ export default function Admin() {
         </div>
       )}
 
-      {/* MODAL DETAIL (MUNCUL PAS KLIK TOMBOL DETAIL) */}
+      {/* MODAL DETAIL */}
       {modalType === 'detail' && selectedOrder && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-3xl w-full max-w-sm max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
@@ -318,6 +364,29 @@ export default function Admin() {
           </div>
         </div>
       )}
+
+      {/* MODAL BERSIHKAN STORAGE */}
+      {modalType === 'cleanup' && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
+          <div className="bg-white p-6 rounded-3xl w-full max-w-sm text-center shadow-2xl">
+            <div className="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
+              <AlertTriangle size={32} />
+            </div>
+            <h2 className="font-bold text-xl text-gray-800 mb-2">Bersihkan Bukti TF?</h2>
+            <p className="text-sm text-gray-500 mb-6 leading-relaxed">
+              Sistem akan menghapus <b>fisik foto bukti transfer</b> yang umurnya lebih dari 24 jam dari server. <br/><br/>
+              <span className="text-green-600 font-bold">Data transaksi (Nama, Total, Menu) tetap aman.</span>
+            </p>
+            <div className="flex gap-2">
+              <button onClick={() => setModalType(null)} className="flex-1 bg-gray-100 py-3 rounded-xl font-bold text-sm text-gray-600 hover:bg-gray-200">Batal</button>
+              <button onClick={handleCleanup} disabled={isDeleting} className="flex-1 bg-red-500 text-white py-3 rounded-xl font-bold text-sm hover:bg-red-600 disabled:opacity-50">
+                {isDeleting ? 'Menghapus...' : 'Ya, Bersihkan'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </AdminLayout>
   );
 }
