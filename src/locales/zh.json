@@ -2,9 +2,11 @@
   "search_placeholder": "搜索你最喜欢的食物或饮料...",
   "menu_title": "精选菜单",
   "menu_sub": "选择您想点的菜单",
-  "cart_title": "购物车与结账",
-  "total": "总计",
-  "order_now": "立即订购",
-  "empty_cart": "购物车是空的",
-  "profile_title": "个人资料与帮助"
+  "promo_btn": "领取优惠",
+  "promo_title_default": "今日 25% 折扣！",
+  "promo_sub_default": "享受所有美食菜单的特别优惠。",
+  "promo_title_friday": "蒙福的星期五！🕌",
+  "promo_sub_friday": "今天精选菜单的特价。",
+  "stock_remaining": "剩余",
+  "sold_out": "售罄"
 }

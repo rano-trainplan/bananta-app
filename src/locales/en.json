@@ -2,9 +2,11 @@
   "search_placeholder": "Search for your favorite food or drink...",
   "menu_title": "Featured Menu",
   "menu_sub": "Choose the menu you want to order",
-  "cart_title": "Cart & Checkout",
-  "total": "Total",
-  "order_now": "Order Now",
-  "empty_cart": "Cart is Empty",
-  "profile_title": "Profile & Help"
+  "promo_btn": "Take Promo",
+  "promo_title_default": "25% Off Today!",
+  "promo_sub_default": "Enjoy special promos for all food menus.",
+  "promo_title_friday": "Blessed Friday! 🕌",
+  "promo_sub_friday": "Special prices for selected menus today.",
+  "stock_remaining": "Remaining",
+  "sold_out": "Sold Out"
 }

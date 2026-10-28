@@ -2,9 +2,11 @@
   "search_placeholder": "Cari makanan atau minuman favoritmu...",
   "menu_title": "Menu Pilihan",
   "menu_sub": "Pilih menu yang ingin dipesan",
-  "cart_title": "Keranjang & Checkout",
-  "total": "Total",
-  "order_now": "Pesan Sekarang",
-  "empty_cart": "Keranjang Masih Kosong",
-  "profile_title": "Profil & Bantuan"
+  "promo_btn": "Ambil Promo",
+  "promo_title_default": "Diskon 25% Hari Ini!",
+  "promo_sub_default": "Nikmati promo spesial untuk semua menu makanan.",
+  "promo_title_friday": "Jumat Berkah! 🕌",
+  "promo_sub_friday": "Harga spesial untuk menu pilihan hari ini.",
+  "stock_remaining": "Sisa",
+  "sold_out": "Habis"
 }

@@ -5,29 +5,27 @@ import BottomNav from '../components/layout/BottomNav';
 import { supabase } from '../lib/supabase';
 import type { Product } from '../types';
 import { useCart } from '../context/CartContext';
-import { useLanguage } from '../context/LanguageContext';
+import { useLanguage } from '../context/LanguageContext'; // <-- IMPORT
 
 export default function Home() {
   const [products, setProducts] = useState<Product[]>([]);
   const [storeSettings, setStoreSettings] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const { t } = useLanguage();
   
   const [activeCategory, setActiveCategory] = useState('Semua');
   const [searchQuery, setSearchQuery] = useState('');
 
   const { addToCart } = useCart();
+  const { t } = useLanguage(); // <-- PANGGIL HOOK
 
   const isFriday = new Date().getDay() === 5;
 
   useEffect(() => {
     async function fetchData() {
-      // Fetch Produk
       const { data: prodData, error } = await supabase.from('products').select('*');
       if (error) console.error("Gagal ambil data:", error);
       else setProducts(prodData || []);
 
-      // Fetch Pengaturan Toko
       const { data: settings } = await supabase.from('store_settings').select('*').eq('id', 1).single();
       if (settings) setStoreSettings(settings);
 
@@ -36,7 +34,6 @@ export default function Home() {
     
     fetchData();
 
-    // REALTIME LISTENER (Biar stok langsung berubah tanpa refresh)
     const channel = supabase.channel('realtime-products')
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'products' }, (payload) => {
         setProducts(prevProducts => 
@@ -90,7 +87,6 @@ export default function Home() {
                   <span className="text-xs text-gray-500 pr-8">
                     {storeSettings?.store_address || 'Lelilef Waebulen, Depan Bank BRI'}
                   </span>
-                  {/* Duplikasi teks biar gak putus */}
                   <span className="text-xs text-gray-500 pr-8">
                     {storeSettings?.store_address || 'Lelilef Waebulen, Depan Bank BRI'}
                   </span>
@@ -110,7 +106,7 @@ export default function Home() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
           <input 
             type="text" 
-            placeholder={t('search_placeholder')} 
+            placeholder={t('search_placeholder')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full bg-gray-100 rounded-xl py-3 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-[#F59E0B]" 
@@ -127,17 +123,17 @@ export default function Home() {
           <div className="relative z-10">
             {isFriday ? (
               <>
-                <h2 className="font-bold text-lg mb-1">{storeSettings?.promo_title_friday || 'Jumat Berkah! 🕌'}</h2>
-                <p className="text-xs opacity-90 mb-3">{storeSettings?.promo_subtitle_friday || 'Harga spesial untuk menu pilihan hari ini.'}</p>
+                <h2 className="font-bold text-lg mb-1">{storeSettings?.promo_title_friday || t('promo_title_friday')}</h2>
+                <p className="text-xs opacity-90 mb-3">{storeSettings?.promo_subtitle_friday || t('promo_sub_friday')}</p>
               </>
             ) : (
               <>
-                <h2 className="font-bold text-lg mb-1">{storeSettings?.promo_title || 'Diskon 25% Hari Ini!'}</h2>
-                <p className="text-xs opacity-90 mb-3">{storeSettings?.promo_subtitle || 'Nikmati promo spesial untuk semua menu makanan.'}</p>
+                <h2 className="font-bold text-lg mb-1">{storeSettings?.promo_title || t('promo_title_default')}</h2>
+                <p className="text-xs opacity-90 mb-3">{storeSettings?.promo_subtitle || t('promo_sub_default')}</p>
               </>
             )}
             <span className="bg-white text-[#D97706] text-xs font-bold py-1 px-3 rounded-full">
-              {storeSettings?.promo_badge || 'Ambil Promo'}
+              {storeSettings?.promo_badge || t('promo_btn')}
             </span>
           </div>
           <Star className="absolute right-4 bottom-4 text-white opacity-20" size={80} />
@@ -193,7 +189,7 @@ export default function Home() {
                             <span className="text-xs text-gray-400 line-through">Rp {product.price.toLocaleString('id-ID')}</span>
                           )}
                           <span className="font-bold text-[#F59E0B]">Rp {displayPrice.toLocaleString('id-ID')}</span>
-                          <span className="text-[10px] text-gray-500 mt-0.5">Sisa: {(product as any).stock || 0}</span>
+                          <span className="text-[10px] text-gray-500 mt-0.5">{t('stock_remaining')}: {(product as any).stock || 0}</span>
                         </div>
                         
                         {(product as any).stock > 0 ? (
@@ -205,7 +201,7 @@ export default function Home() {
                           </button>
                         ) : (
                           <div className="bg-gray-100 text-gray-400 px-3 py-1.5 rounded-lg text-xs font-bold cursor-not-allowed">
-                            Habis
+                            {t('sold_out')}
                           </div>
                         )}
                       </div>
