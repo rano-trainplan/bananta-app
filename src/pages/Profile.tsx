@@ -3,11 +3,11 @@ import { ArrowLeft, MapPin, Phone, Clock, HelpCircle, Bike, FileText, CheckCircl
 import BottomNav from '../components/layout/BottomNav';
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { useLanguage } from '../context/LanguageContext'; // <-- IMPORT BARU
+import { useLanguage } from '../context/LanguageContext';
 
 export default function Profile() {
   const [storeSettings, setStoreSettings] = useState<any>(null);
-  const { language, setLanguage } = useLanguage(); // <-- PANGGIL HOOK
+  const { language, setLanguage, t } = useLanguage();
 
   useEffect(() => {
     async function fetchSettings() {
@@ -17,7 +17,6 @@ export default function Profile() {
     fetchSettings();
   }, []);
 
-  // Ganti format nomor HP ke wa.me
   const waNumber = storeSettings?.store_phone 
     ? storeSettings.store_phone.replace(/^0/, '62').replace(/\D/g, '') 
     : '6282151855286';
@@ -31,12 +30,12 @@ export default function Profile() {
             <ArrowLeft size={18} />
           </Link>
           <div>
-            <h1 className="font-bold text-base leading-tight">Profil & Bantuan</h1>
-            <p className="text-[10px] text-gray-500">Restoran & Cafe Lelilef</p>
+            <h1 className="font-bold text-base leading-tight">{t('profile_title')}</h1>
+            <p className="text-[10px] text-gray-500">{t('profile_sub')}</p>
           </div>
         </div>
         <span className="bg-green-50 text-green-600 border border-green-100 px-2 py-1 rounded-md text-[10px] font-bold flex items-center gap-1">
-          <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span> Buka
+          <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span> {t('open_status')}
         </span>
       </header>
 
@@ -46,7 +45,6 @@ export default function Profile() {
         <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 flex flex-col items-center text-center relative overflow-hidden">
           <div className="absolute top-0 left-0 w-full h-16 bg-orange-50/50"></div>
 
-          {/* Avatar / Logo Toko */}
           <div className="relative mt-2 mb-3">
             <div className="w-20 h-20 bg-white rounded-full p-1 shadow-md relative z-10">
               {storeSettings?.store_logo ? (
@@ -65,9 +63,8 @@ export default function Profile() {
           <h2 className="font-bold text-xl text-gray-800 flex items-center justify-center gap-1">
             {storeSettings?.store_name || 'Bananta Sultan'} <span className="text-yellow-400 text-sm">⭐</span>
           </h2>
-          <p className="text-xs text-gray-500 mt-1">Restoran & Cafe • Lelilef Waebulen</p>
+          <p className="text-xs text-gray-500 mt-1">{t('profile_sub')}</p>
 
-          {/* Badges */}
           <div className="flex flex-wrap justify-center gap-2 mt-3 mb-5">
             <span className="bg-orange-50 text-orange-600 text-[10px] font-bold px-2.5 py-1 rounded-full border border-orange-100 flex items-center gap-1">
               ⭐ 4.9 (500+ Ulasan)
@@ -75,15 +72,11 @@ export default function Profile() {
             <span className="bg-gray-100 text-gray-700 text-[10px] font-bold px-2.5 py-1 rounded-full border border-gray-200">
               Halal Food
             </span>
-            <span className="bg-blue-50 text-blue-600 text-[10px] font-bold px-2.5 py-1 rounded-full border border-blue-100">
-              Dine-In & Takeaway
-            </span>
           </div>
 
-          {/* Tombol Aksi */}
           <div className="flex w-full gap-2 relative z-10">
             <a href={`tel:${storeSettings?.store_phone || '082151855286'}`} className="flex-1 bg-gray-50 border border-gray-200 text-gray-700 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 hover:bg-gray-100 transition-colors">
-              <Phone size={14} /> Hubungi
+              <Phone size={14} /> {t('contact_title')}
             </a>
             <a href={`https://wa.me/${waNumber}`} target="_blank" rel="noreferrer" className="flex-1 bg-green-500 text-white py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 hover:bg-green-600 shadow-md transition-colors">
               <MessageCircle size={14} /> WhatsApp
@@ -101,14 +94,13 @@ export default function Profile() {
         {/* KARTU KONTAK & ALAMAT */}
         <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-2 space-y-1">
           
-          {/* Alamat */}
           <div className="p-3 flex items-start gap-4 hover:bg-gray-50 rounded-2xl transition-colors cursor-pointer group">
             <div className="bg-orange-50 p-2.5 rounded-xl text-orange-500 mt-0.5 group-hover:scale-110 transition-transform">
               <MapPin size={20} />
             </div>
             <div className="flex-1">
               <div className="flex justify-between items-center mb-1">
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Alamat Lengkap</p>
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{t('address_title')}</p>
                 <a href={`https://maps.google.com/?q=${storeSettings?.store_address || 'Lelilef Waebulen'}`} target="_blank" rel="noreferrer" className="text-[10px] font-bold text-orange-500 flex items-center gap-1">
                   Maps <ExternalLink size={10}/>
                 </a>
@@ -116,7 +108,7 @@ export default function Profile() {
               <p className="text-sm font-bold text-gray-800">Lelilef Waebulen</p>
               <div className="bg-orange-50/50 border border-orange-100/50 p-2 rounded-lg mt-1.5">
                 <p className="text-[10px] text-gray-600 leading-relaxed">
-                  <span className="font-bold text-orange-600">Patokan:</span> {storeSettings?.store_address || 'Depan Bank BRI Waebulen, samping jalan raya, kedai warna kuning.'}
+                  <span className="font-bold text-orange-600">{t('address_patokan')}</span> {storeSettings?.store_address || 'Depan Bank BRI Waebulen, samping jalan raya, kedai warna kuning.'}
                 </p>
               </div>
             </div>
@@ -124,50 +116,47 @@ export default function Profile() {
 
           <div className="h-px bg-gray-100 mx-4"></div>
 
-          {/* Telepon */}
           <div className="p-3 flex items-start gap-4">
             <div className="bg-orange-50 p-2.5 rounded-xl text-orange-500 mt-0.5">
               <Phone size={20} />
             </div>
             <div className="flex-1">
               <div className="flex justify-between items-center mb-1">
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Nomor Kontak Toko</p>
-                <button onClick={() => { navigator.clipboard.writeText(storeSettings?.store_phone || '0821-5185-5286'); alert('Nomor disalin!') }} className="text-[10px] font-bold text-gray-500 bg-gray-100 px-2 py-0.5 rounded hover:bg-gray-200 transition-colors">Salin</button>
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{t('contact_title')}</p>
+                <button onClick={() => { navigator.clipboard.writeText(storeSettings?.store_phone || '0821-5185-5286'); alert('Disalin!') }} className="text-[10px] font-bold text-gray-500 bg-gray-100 px-2 py-0.5 rounded hover:bg-gray-200 transition-colors">{t('copy_btn')}</button>
               </div>
               <p className="text-sm font-bold text-orange-500 font-mono tracking-wider">{storeSettings?.store_phone || '0821-5185-5286'}</p>
-              <p className="text-[10px] text-gray-500 mt-1">Tersedia untuk pengiriman & pertanyaan via WhatsApp.</p>
+              <p className="text-[10px] text-gray-500 mt-1">{t('contact_sub')}</p>
             </div>
           </div>
 
           <div className="h-px bg-gray-100 mx-4"></div>
 
-          {/* Jam Operasional */}
           <div className="p-3 flex items-start gap-4">
             <div className="bg-orange-50 p-2.5 rounded-xl text-orange-500 mt-0.5">
               <Clock size={20} />
             </div>
             <div className="flex-1">
               <div className="flex justify-between items-center mb-1">
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Jam Buka & Tutup</p>
-                <span className="bg-green-50 text-green-600 text-[9px] font-bold px-2 py-0.5 rounded border border-green-100">Hari Ini Buka</span>
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{t('hours_title')}</p>
               </div>
               <p className="text-sm font-bold text-gray-800">{storeSettings?.store_hours || '10.00 - 22.00 WIT'}</p>
-              <p className="text-[10px] text-gray-500 mt-1">Buka setiap hari (Senin s/d Minggu).</p>
+              <p className="text-[10px] text-gray-500 mt-1">{t('hours_sub')}</p>
             </div>
           </div>
         </div>
 
         {/* BANTUAN & LAYANAN */}
         <div>
-          <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 ml-2">Bantuan & Layanan</h3>
+          <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 ml-2">{t('help_title')}</h3>
           <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-2 space-y-1">
             
             <a href="#" className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-2xl transition-colors group">
               <div className="flex items-center gap-3">
                 <div className="bg-gray-100 p-2 rounded-xl text-gray-500 group-hover:text-orange-500 transition-colors"><HelpCircle size={18}/></div>
                 <div>
-                  <p className="text-xs font-bold text-gray-800">Pertanyaan Umum (FAQ)</p>
-                  <p className="text-[10px] text-gray-500">Cara order, pembayaran & ongkos kirim</p>
+                  <p className="text-xs font-bold text-gray-800">{t('faq')}</p>
+                  <p className="text-[10px] text-gray-500">{t('faq_sub')}</p>
                 </div>
               </div>
               <span className="text-gray-300 text-lg">›</span>
@@ -177,8 +166,8 @@ export default function Profile() {
               <div className="flex items-center gap-3">
                 <div className="bg-gray-100 p-2 rounded-xl text-gray-500 group-hover:text-orange-500 transition-colors"><Bike size={18}/></div>
                 <div>
-                  <p className="text-xs font-bold text-gray-800">Area Antar & Kurir Resto</p>
-                  <p className="text-[10px] text-gray-500">Jangkauan kurir wilayah Lelilef & sekitar</p>
+                  <p className="text-xs font-bold text-gray-800">{t('courier_area')}</p>
+                  <p className="text-[10px] text-gray-500">{t('courier_area_sub')}</p>
                 </div>
               </div>
               <span className="text-gray-300 text-lg">›</span>
@@ -188,21 +177,17 @@ export default function Profile() {
               <div className="flex items-center gap-3">
                 <div className="bg-orange-50 p-2 rounded-xl text-orange-500"><FileText size={18}/></div>
                 <div>
-                  <p className="text-xs font-bold text-gray-800 flex items-center gap-2">Layanan Komplain & Saran</p>
-                  <p className="text-[10px] text-gray-500">Kritik pelayanan untuk hasil lebih ramah</p>
+                  <p className="text-xs font-bold text-gray-800 flex items-center gap-2">{t('complaint')}</p>
+                  <p className="text-[10px] text-gray-500">{t('complaint_sub')}</p>
                 </div>
               </div>
-              <span className="bg-orange-100 text-orange-600 text-[9px] font-bold px-2 py-1 rounded-md">Respon Cepat</span>
             </a>
           </div>
         </div>
 
-        {/* FOOTER VERSI */}
         <div className="text-center pt-4 pb-2">
           <p className="text-[10px] text-gray-400 font-medium">{storeSettings?.store_name || 'Bananta Sultan'} Cafe & Resto • v1.4.0</p>
-          <p className="text-[9px] text-gray-400 mt-0.5">Cita Rasa Terbaik untuk Pelanggan Setia</p>
         </div>
-
       </div>
       <BottomNav />
     </div>
