@@ -491,9 +491,38 @@ export default function Courier() {
                 </div>
               </div>
               <div className="flex gap-2">
-                <button className="bg-orange-500 text-white text-[10px] font-bold px-3 py-1.5 rounded-lg">Hari Ini</button>
-                <button className="bg-gray-100 text-gray-600 text-[10px] font-bold px-3 py-1.5 rounded-lg">Minggu Ini</button>
-                <button className="bg-gray-100 text-gray-600 text-[10px] font-bold px-3 py-1.5 rounded-lg">Bulan Ini</button>
+                <button 
+                  onClick={() => {
+                    const today = new Date().toISOString().split('T')[0];
+                    setStartDate(today);
+                    setEndDate(today);
+                  }} 
+                  className="bg-orange-500 text-white text-[10px] font-bold px-3 py-1.5 rounded-lg"
+                >
+                  Hari Ini
+                </button>
+                <button 
+                  onClick={() => {
+                    const today = new Date();
+                    const firstDay = new Date(today.setDate(today.getDate() - today.getDay())); // Minggu ini
+                    setStartDate(firstDay.toISOString().split('T')[0]);
+                    setEndDate(new Date().toISOString().split('T')[0]);
+                  }} 
+                  className="bg-gray-100 text-gray-600 text-[10px] font-bold px-3 py-1.5 rounded-lg hover:bg-gray-200"
+                >
+                  Minggu Ini
+                </button>
+                <button 
+                  onClick={() => {
+                    const today = new Date();
+                    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1); // Tanggal 1 bulan ini
+                    setStartDate(firstDay.toISOString().split('T')[0]);
+                    setEndDate(new Date().toISOString().split('T')[0]);
+                  }} 
+                  className="bg-gray-100 text-gray-600 text-[10px] font-bold px-3 py-1.5 rounded-lg hover:bg-gray-200"
+                >
+                  Bulan Ini
+                </button>
               </div>
             </div>
 
