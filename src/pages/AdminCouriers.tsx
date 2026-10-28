@@ -179,6 +179,18 @@ export default function AdminCouriers() {
             </div>
 
             <form onSubmit={handleSave} className="p-5 space-y-4 overflow-y-auto">
+                            <div>
+                <label className="text-xs font-bold text-gray-700 mb-1 block">Jenis / Merk Motor</label>
+                <div className="relative">
+                  <Bike className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                  <input 
+                    value={formData.vehicle_type} 
+                    onChange={e => setFormData({...formData, vehicle_type: e.target.value})} 
+                    placeholder="Contoh: Honda Vario 160 Hitam" 
+                    className="w-full bg-gray-50 border border-gray-200 p-2.5 pl-9 rounded-xl text-sm text-gray-700 focus:ring-2 focus:ring-orange-500 outline-none" 
+                  />
+                </div>
+              </div>
               
               <div>
                 <label className="text-xs font-bold text-gray-700 mb-1 block">Foto Profil Kurir</label>
