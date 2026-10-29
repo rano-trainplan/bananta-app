@@ -72,7 +72,7 @@ export default function Courier() {
     checkSession();
   }, []);
 
-  useEffect(() => {
+   useEffect(() => {
     if (!currentCourier) return;
     fetchData();
     
@@ -84,9 +84,23 @@ export default function Courier() {
         }
         fetchData();
       })
-      .subscribe();
+      .subscribe((status) => {
+        // Kalau koneksi putus, coba sambung lagi tiap 3 detik
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          console.log('Koneksi Realtime Putus, mencoba sambung ulang...');
+          setTimeout(() => channel.subscribe(), 3000);
+        }
+      });
 
-    return () => { supabase.removeChannel(channel); };
+    // TAMBAHAN: Paksa tarik data tiap 15 detik (jaga-jaga kalau realtime mati total)
+    const interval = setInterval(() => {
+      fetchData();
+    }, 15000);
+
+    return () => { 
+      clearInterval(interval);
+      supabase.removeChannel(channel); 
+    };
   }, [currentCourier, startDate, endDate]);
 
   const playNotificationSound = () => {
