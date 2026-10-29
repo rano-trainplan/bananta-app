@@ -37,25 +37,49 @@ export default function Admin() {
     setLoading(false);
   }
 
-  const handleCleanup = async () => {
+    const handleCleanup = async () => {
     setIsDeleting(true);
     try {
       const yesterday = new Date();
-      yesterday.setDate(yesterday.getDate() - 1);
-      const { data: oldOrders } = await supabase.from('orders').select('id, payment_proof').not('payment_proof', 'is', null).lte('created_at', yesterday.toISOString());
+      yesterday.setDate(yesterday.getDate() - 1); // Waktu 24 Jam yang lalu
+      
+      // Cari pesanan yang punya foto pengantaran dan umurnya > 24 jam
+      const { data: oldOrders } = await supabase
+        .from('orders')
+        .select('id, proof_of_delivery')
+        .not('proof_of_delivery', 'is', null)
+        .lte('created_at', yesterday.toISOString());
+
       if (!oldOrders || oldOrders.length === 0) {
-        toast.success("Tidak ada file yang perlu dihapus."); setModalType(null); setIsDeleting(false); return;
+        toast.success("Tidak ada foto pengantaran lama yang perlu dihapus.");
+        setModalType(null);
+        setIsDeleting(false);
+        return;
       }
-      const fileNames = oldOrders.map(o => { const urlParts = o.payment_proof.split('/'); return urlParts[urlParts.length - 1]; });
+
+      // Ambil nama file dari URL
+      const fileNames = oldOrders.map(o => {
+        const urlParts = o.proof_of_delivery.split('/');
+        return urlParts[urlParts.length - 1]; 
+      });
+
+      // Hapus fisik file dari Supabase Storage
       const { error: storageError } = await supabase.storage.from('uploads').remove(fileNames);
       if (storageError) throw storageError;
+
+      // Set kolom proof_of_delivery jadi NULL di database (data pesanan tetep aman)
       const orderIds = oldOrders.map(o => o.id);
-      const { error: dbError } = await supabase.from('orders').update({ payment_proof: null }).in('id', orderIds);
+      const { error: dbError } = await supabase.from('orders').update({ proof_of_delivery: null }).in('id', orderIds);
       if (dbError) throw dbError;
-      toast.success(`${fileNames.length} file dihapus!`); setModalType(null);
+
+      toast.success(`${fileNames.length} Foto Pengantaran berhasil dihapus permanen!`);
+      setModalType(null);
     } catch (error) {
-      console.error(error); toast.error("Gagal membersihkan.");
-    } finally { setIsDeleting(false); }
+      console.error(error);
+      toast.error("Gagal membersihkan storage.");
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
  
@@ -256,15 +280,22 @@ export default function Admin() {
       )}
 
       {/* MODAL BERSIHKAN STORAGE */}
-      {modalType === 'cleanup' && (
+           {modalType === 'cleanup' && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
           <div className="bg-white p-6 rounded-3xl w-full max-w-sm text-center shadow-2xl">
-            <div className="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4"><AlertTriangle size={32} /></div>
-            <h2 className="font-bold text-xl text-gray-800 mb-2">Bersihkan Bukti TF?</h2>
-            <p className="text-sm text-gray-500 mb-6 leading-relaxed">Sistem akan menghapus <b>fisik foto bukti transfer</b> lama dari server.<br/><br/><span className="text-green-600 font-bold">Data transaksi tetap aman.</span></p>
+            <div className="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
+              <AlertTriangle size={32} />
+            </div>
+            <h2 className="font-bold text-xl text-gray-800 mb-2">Bersihkan Foto Pengantaran?</h2>
+            <p className="text-sm text-gray-500 mb-6 leading-relaxed">
+              Sistem akan menghapus <b>foto bukti pengantaran kurir</b> yang umurnya lebih dari 24 jam dari server. <br/><br/>
+              <span className="text-green-600 font-bold">Data transaksi (Nama, Total, Menu) tetap aman.</span>
+            </p>
             <div className="flex gap-2">
               <button onClick={() => setModalType(null)} className="flex-1 bg-gray-100 py-3 rounded-xl font-bold text-sm text-gray-600 hover:bg-gray-200">Batal</button>
-              <button onClick={handleCleanup} disabled={isDeleting} className="flex-1 bg-red-500 text-white py-3 rounded-xl font-bold text-sm hover:bg-red-600 disabled:opacity-50">{isDeleting ? 'Menghapus...' : 'Ya, Bersihkan'}</button>
+              <button onClick={handleCleanup} disabled={isDeleting} className="flex-1 bg-red-500 text-white py-3 rounded-xl font-bold text-sm hover:bg-red-600 disabled:opacity-50">
+                {isDeleting ? 'Menghapus...' : 'Ya, Bersihkan'}
+              </button>
             </div>
           </div>
         </div>
