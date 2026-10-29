@@ -26,7 +26,12 @@ export default function Tracking() {
       (payload) => { setOrder(payload.new); })
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
+    const interval = setInterval(() => { fetchOrder(); }, 10000);
+
+    return () => { 
+      clearInterval(interval);
+      supabase.removeChannel(channel); 
+    };
   }, [orderId]);
 
   // LOGIKA TIMER 1 JAM
@@ -118,7 +123,7 @@ export default function Tracking() {
           </div>
         )}
 
-        {/* PETA & KURIR (Cuma muncul kalau udah dikirim) */}
+        {/* PETA & KURIR */}
         {(order.status === 'Dikirim' || order.status === 'Selesai') && (
           <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden relative">
             <div className="h-48 bg-[#E5E7EB] relative overflow-hidden">
@@ -153,14 +158,23 @@ export default function Tracking() {
           </div>
         )}
 
-        {/* TIMELINE (Cuma muncul kalau gak dibatalkan/ditolak) */}
+        {/* TIMELINE ANIMASI BARU */}
         {(order.status !== 'Dibatalkan' && order.status !== 'Menunggu Pembayaran') && (
           <div className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100">
             <div className="flex justify-between items-center mb-5">
               <h3 className="font-bold text-sm text-gray-800">{t('tracking_timeline')}</h3>
               <span className="text-[9px] font-bold text-green-600 bg-green-50 px-2 py-1 rounded flex items-center gap-1"><span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span> Real-time</span>
             </div>
-            <div className="relative pl-6 space-y-6 before:content-[''] before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-gray-100">
+            
+            <div className="relative pl-6 space-y-6">
+              {/* GARIS VERTIKAL ANIMASI */}
+              <div className="absolute left-2.5 top-2 bottom-2 w-0.5 bg-gray-100 rounded-full overflow-hidden">
+                <div 
+                  className="bg-green-500 w-full transition-all duration-1000 ease-in-out" 
+                  style={{ height: `${(currentIndex / (statusOrder.length - 1)) * 100}%` }}
+                ></div>
+              </div>
+
               {[
                 { key: 'Dibuat', label: t('status_created'), sub: 'Pesanan telah masuk ke sistem dapur', icon: Clock, time: order.created_at },
                 { key: 'Validasi', label: t('status_validated'), sub: 'Transaksi otomatis terverifikasi', icon: CheckCircle, time: order.updated_at },
@@ -170,15 +184,38 @@ export default function Tracking() {
               ].map((step) => {
                 const status = getStepStatus(step.key);
                 const Icon = step.icon;
+                
                 return (
-                  <div key={step.key} className="relative">
-                    <div className={`absolute -left-6 top-0 w-5 h-5 rounded-full flex items-center justify-center z-10 border-2 ${status === 'done' ? 'bg-green-500 border-green-500 text-white' : status === 'active' ? 'bg-orange-500 border-orange-500 text-white shadow-[0_0_0_4px_rgba(249,115,22,0.2)]' : 'bg-white border-gray-200 text-gray-300'}`}>
-                      <Icon size={10} strokeWidth={3} />
+                  <div key={step.key} className="relative group">
+                    {/* TITIK TIMELINE */}
+                    <div className={`absolute -left-6 top-0 w-6 h-6 rounded-full flex items-center justify-center z-10 border-2 transition-all duration-500 ${
+                      status === 'done' ? 'bg-green-500 border-green-500 text-white scale-110' : 
+                      status === 'active' ? 'bg-orange-500 border-orange-500 text-white shadow-[0_0_0_4px_rgba(249,115,22,0.2)] scale-110' : 
+                      'bg-white border-gray-200 text-gray-300 scale-100'
+                    }`}>
+                      <Icon size={12} strokeWidth={3} />
+                      
+                      {/* ANIMASI DENYUT (PULSE) KHUSUS YANG AKTIF */}
+                      {status === 'active' && (
+                        <span className="absolute inset-0 rounded-full bg-orange-400 animate-ping opacity-75"></span>
+                      )}
                     </div>
-                    <div className={`${status === 'pending' ? 'opacity-40' : 'opacity-100'} ml-2`}>
+                    
+                    <div className={`${status === 'pending' ? 'opacity-40' : 'opacity-100'} ml-2 transition-opacity duration-500`}>
                       <div className="flex justify-between items-start">
-                        <p className={`text-sm font-bold ${status === 'active' ? 'text-orange-600' : status === 'done' ? 'text-green-700' : 'text-gray-800'}`}>{step.label}{status === 'active' && <span className="ml-2 text-[9px] bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded-full">Aktif</span>}</p>
-                        {status !== 'pending' && step.time && <p className="text-[10px] text-gray-400 font-medium">{new Date(step.time).toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit'})}</p>}
+                        <p className={`text-sm font-bold transition-colors duration-300 ${
+                          status === 'active' ? 'text-orange-600' : 
+                          status === 'done' ? 'text-green-700' : 
+                          'text-gray-800'
+                        }`}>
+                          {step.label}
+                          {status === 'active' && <span className="ml-2 text-[9px] bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded-full animate-pulse">Aktif</span>}
+                        </p>
+                        {status !== 'pending' && step.time && (
+                          <p className="text-[10px] text-gray-400 font-medium">
+                            {new Date(step.time).toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit'})}
+                          </p>
+                        )}
                       </div>
                       {status !== 'pending' && <p className="text-[10px] text-gray-500 mt-0.5">{step.sub}</p>}
                     </div>
@@ -189,9 +226,9 @@ export default function Tracking() {
           </div>
         )}
 
-                {/* BUKTI PENGANTARAN KURIR */}
+        {/* BUKTI PENGANTARAN KURIR (FOTO) */}
         {order.status === 'Selesai' && order.proof_of_delivery && (
-          <div className="bg-white p-4 rounded-3xl shadow-sm border border-green-200 mb-2">
+          <div className="bg-white p-4 rounded-3xl shadow-sm border border-green-200 mb-2 animate-fade-in-up">
             <h3 className="font-bold text-sm text-green-600 mb-3 flex items-center gap-2">
               <CheckCircle size={16} /> Bukti Pengantaran Kurir
             </h3>
