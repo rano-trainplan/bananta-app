@@ -76,19 +76,20 @@ export default function Cart() {
     setIsLoading(true);
     try {
       // 1. Simpan Pesanan (TANPA UPLOAD GAMBAR)
-      const { data: orderData, error: orderError } = await supabase
+            const { data: orderData, error: orderError } = await supabase
         .from('orders')
         .insert([{
           customer_name: nama,
           phone: noHp,
           order_type: 'Online',
           address: isPickup ? 'Ambil di Toko' : alamat,
-          total_price: grandTotal, 
+          total_price: grandTotal,
           payment_method: metode,
-          status: 'Validasi', // Langsung masuk ke Admin buat dicek
+          status: 'Validasi',
           delivery_type: deliveryType,
           pickup_time: pickupTime ? new Date(pickupTime).toISOString() : null,
-          shipping_cost: finalShipping
+          shipping_cost: finalShipping,
+          payment_proof: 'TF_MANUAL' // <--- TAMBAHKAN INI
         }])
         .select()
         .single();
