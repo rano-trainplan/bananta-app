@@ -14,7 +14,7 @@ export default function Cart() {
   const [nama, setNama] = useState('');
   const [noHp, setNoHp] = useState('');
   const [alamat, setAlamat] = useState('');
-  const [metode, setMetode] = useState('Transfer Bank'); // Default langsung ke Transfer
+  const [metode, setMetode] = useState('Transfer Bank');
   const [buktiTransfer, setBuktiTransfer] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -38,7 +38,60 @@ export default function Cart() {
       if (settings) setStoreSettings(settings);
     }
     fetchData();
+    processQueue(); // Coba kirim antrean pas halaman dibuka
   }, []);
+
+  // FUNGSI PENGIRIMAN KE SUPABASE (Dipisah biar bisa dipake antrean)
+  const processOrder = async (orderData: any, items: any[]) => {
+    const { data: newOrder, error: orderError } = await supabase
+      .from('orders')
+      .insert([orderData])
+      .select()
+      .single();
+
+    if (orderError) throw orderError;
+
+    const itemsToInsert = items.map(item => ({
+      order_id: newOrder.id,
+      product_name: item.name,
+      quantity: item.quantity,
+      price: item.price
+    }));
+    await supabase.from('order_items').insert(itemsToInsert);
+
+    // Potong Stok
+    for (const item of items) {
+      const { data: productData } = await supabase.from('products').select('stock').eq('id', item.id).single();
+      if (productData) {
+        const currentStock = productData.stock || 0;
+        const newStock = Math.max(0, currentStock - item.quantity);
+        await supabase.from('products').update({ stock: newStock }).eq('id', item.id);
+      }
+    }
+
+    return newOrder;
+  };
+
+  // FUNGSI CEK ANTREAN DI HP
+  const processQueue = async () => {
+    const queue = JSON.parse(localStorage.getItem('order_queue') || '[]');
+    if (queue.length === 0) return;
+
+    for (const item of queue) {
+      try {
+        const newOrder = await processOrder(item.orderData, item.items);
+        // Kalau berhasil, simpan ID ke riwayat HP
+        const existingOrders = JSON.parse(localStorage.getItem('my_orders') || '[]');
+        localStorage.setItem('my_orders', JSON.stringify([...existingOrders, newOrder.id]));
+        toast.success("Pesanan tertunda berhasil dikirim!");
+      } catch (err) {
+        console.log("Gagal kirim antrean, coba lagi nanti.", err);
+        break; // Berhenti kalau masih gagal (sinyal jelek)
+      }
+    }
+    // Hapus antrean yang udah sukses
+    localStorage.removeItem('order_queue');
+  };
 
   const handleCopy = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
@@ -74,60 +127,44 @@ export default function Cart() {
     if (isPickup && !pickupTime) return alert("Harap pilih jadwal pengambilan!");
 
     setIsLoading(true);
+    const orderData = {
+      customer_name: nama,
+      phone: noHp,
+      order_type: 'Online',
+      address: isPickup ? 'Ambil di Toko' : alamat,
+      total_price: grandTotal,
+      payment_method: metode,
+      status: 'Dibuat',
+      delivery_type: deliveryType,
+      pickup_time: pickupTime ? new Date(pickupTime).toISOString() : null,
+      shipping_cost: finalShipping
+    };
+
     try {
-      let proofUrl = null;
       const fileExt = buktiTransfer.name.split('.').pop();
       const fileName = `proof-${Date.now()}.${fileExt}`;
       const { error: uploadError } = await supabase.storage.from('uploads').upload(fileName, buktiTransfer);
       if (uploadError) throw uploadError;
       const { data: urlData } = supabase.storage.from('uploads').getPublicUrl(fileName);
-      proofUrl = urlData.publicUrl;
-
-      const { data: orderData, error: orderError } = await supabase
-        .from('orders')
-        .insert([{
-          customer_name: nama,
-          phone: noHp,
-          order_type: 'Online',
-          address: isPickup ? 'Ambil di Toko' : alamat,
-          total_price: grandTotal,
-          payment_method: metode,
-          status: 'Dibuat',
-          payment_proof: proofUrl,
-          delivery_type: deliveryType,
-          pickup_time: pickupTime ? new Date(pickupTime).toISOString() : null,
-          shipping_cost: finalShipping
-        }])
-        .select()
-        .single();
-
-      if (orderError) throw orderError;
-
-      const itemsToInsert = cart.map(item => ({
-        order_id: orderData.id,
-        product_name: item.name,
-        quantity: item.quantity,
-        price: item.price
-      }));
-      await supabase.from('order_items').insert(itemsToInsert);
-
-      for (const item of cart) {
-        const { data: productData } = await supabase.from('products').select('stock').eq('id', item.id).single();
-        if (productData) {
-          const currentStock = productData.stock || 0;
-          const newStock = Math.max(0, currentStock - item.quantity);
-          await supabase.from('products').update({ stock: newStock }).eq('id', item.id);
-        }
-      }
-
+      
+      const newOrder = await processOrder({ ...orderData, payment_proof: urlData.publicUrl }, cart);
+      
       toast.success("Pesanan berhasil dibuat!");
       cart.forEach(item => removeFromCart(item.id));
       const existingOrders = JSON.parse(localStorage.getItem('my_orders') || '[]');
-      localStorage.setItem('my_orders', JSON.stringify([...existingOrders, orderData.id]));
-      navigate(`/tracking/${orderData.id}`);
-    } catch (error) {
+      localStorage.setItem('my_orders', JSON.stringify([...existingOrders, newOrder.id]));
+      navigate(`/tracking/${newOrder.id}`);
+
+    } catch (error: any) {
       console.error(error);
-      alert("Gagal membuat pesanan. Coba lagi.");
+      // KALAU GAGAL (SINYAL JELEK), SIMPEN KE ANTREAN
+      const queue = JSON.parse(localStorage.getItem('order_queue') || '[]');
+      queue.push({ orderData, items: cart });
+      localStorage.setItem('order_queue', JSON.stringify(queue));
+      
+      toast.error("Sinyal lemah. Pesanan disimpan di HP, akan dikirim otomatis saat sinyal membaik.", { duration: 5000 });
+      cart.forEach(item => removeFromCart(item.id));
+      navigate('/');
     } finally {
       setIsLoading(false);
     }
@@ -207,7 +244,6 @@ export default function Cart() {
 
               <h3 className="font-bold text-md border-b pb-2 pt-2">{t('payment_method')}</h3>
               <div className="flex gap-2">
-                {/* TOMBOL QRIS DISABLED */}
                 <button 
                   type="button" 
                   onClick={() => toast.error(t('qris_disabled'))} 
