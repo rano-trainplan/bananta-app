@@ -23,7 +23,7 @@ export default function Cart() {
   const [shippingCost, setShippingCost] = useState(0);
   const [storeSettings, setStoreSettings] = useState<any>(null);
   const [copied, setCopied] = useState<string | null>(null);
-  const [syaratTransfer, setSyaratTransfer] = useState(false); // STATE CHECKBOX
+  const [syaratTransfer, setSyaratTransfer] = useState(false); 
 
   // KODE UNIK
   const [uniqueCode, setUniqueCode] = useState(0);
@@ -40,8 +40,6 @@ export default function Cart() {
       if (settings) setStoreSettings(settings);
     }
     fetchData();
-
-    // Generate kode unik pas pertama kali buka halaman
     setUniqueCode(Math.floor(Math.random() * 900) + 100); 
   }, []);
 
@@ -63,7 +61,7 @@ export default function Cart() {
   const finalShipping = isPickup ? 0 : shippingCost;
   
   const baseTotal = cartTotal + finalShipping;
-  const grandTotal = baseTotal + uniqueCode; // Total Akhir + Kode Unik
+  const grandTotal = baseTotal + uniqueCode;
 
   const handleCheckout = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -75,28 +73,28 @@ export default function Cart() {
 
     setIsLoading(true);
     try {
-      // 1. Simpan Pesanan (TANPA UPLOAD GAMBAR)
-            const { data: orderData, error: orderError } = await supabase
+      // SIMPAN PESANAN DENGAN STATUS MENUNGGU PEMBAYARAN
+      const { data: orderData, error: orderError } = await supabase
         .from('orders')
         .insert([{
           customer_name: nama,
           phone: noHp,
           order_type: 'Online',
           address: isPickup ? 'Ambil di Toko' : alamat,
-          total_price: grandTotal,
+          total_price: grandTotal, 
           payment_method: metode,
-          status: 'Validasi',
+          status: 'Menunggu Pembayaran', // <--- STATUS BARU
           delivery_type: deliveryType,
           pickup_time: pickupTime ? new Date(pickupTime).toISOString() : null,
           shipping_cost: finalShipping,
-          payment_proof: 'TF_MANUAL' // <--- TAMBAHKAN INI
+          payment_proof: 'TF_MANUAL' 
         }])
         .select()
         .single();
 
       if (orderError) throw orderError;
 
-      // 2. Simpan Item & Potong Stok
+      // SIMPAN ITEM & POTONG STOK
       const itemsToInsert = cart.map(item => ({
         order_id: orderData.id,
         product_name: item.name,
@@ -114,7 +112,7 @@ export default function Cart() {
         }
       }
 
-      toast.success("Pesanan dibuat! Menunggu validasi Admin.");
+      toast.success("Pesanan dibuat! Silakan transfer.");
       cart.forEach(item => removeFromCart(item.id));
       const existingOrders = JSON.parse(localStorage.getItem('my_orders') || '[]');
       localStorage.setItem('my_orders', JSON.stringify([...existingOrders, orderData.id]));
@@ -122,7 +120,7 @@ export default function Cart() {
       
     } catch (error: any) {
       console.error(error);
-      alert("Gagal membuat pesanan. Sinyal internet Anda mungkin sedang lemah. Silakan coba lagi.");
+      alert("Gagal membuat pesanan. Coba lagi.");
     } finally {
       setIsLoading(false);
     }
@@ -202,15 +200,9 @@ export default function Cart() {
 
               <h3 className="font-bold text-md border-b pb-2 pt-2">{t('payment_method')}</h3>
               <div className="flex gap-2">
-                <button 
-                  type="button" 
-                  onClick={() => toast.error(t('qris_disabled'))} 
-                  className="flex-1 py-2.5 text-sm font-bold rounded-xl border-2 border-gray-100 bg-gray-50 text-gray-400 cursor-not-allowed relative"
-                >
-                  QRIS
-                  <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[8px] px-1.5 py-0.5 rounded-full">{t('qris_unavailable')}</span>
+                <button type="button" onClick={() => toast.error(t('qris_disabled'))} className="flex-1 py-2.5 text-sm font-bold rounded-xl border-2 border-gray-100 bg-gray-50 text-gray-400 cursor-not-allowed relative">
+                  QRIS <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[8px] px-1.5 py-0.5 rounded-full">{t('qris_unavailable')}</span>
                 </button>
-                
                 <button type="button" onClick={() => setMetode('Transfer Bank')} className={`flex-1 py-2.5 text-sm font-bold rounded-xl border-2 transition-all ${metode === 'Transfer Bank' ? 'bg-[#F59E0B] text-white border-[#F59E0B] shadow-md' : 'bg-white text-gray-500 border-gray-200'}`}>Transfer</button>
               </div>
 
@@ -224,7 +216,6 @@ export default function Cart() {
                     <p className="text-lg font-mono tracking-widest">{storeSettings.bank_account}</p>
                     <p className="text-xs opacity-80 mt-1">a.n. {storeSettings.bank_owner}</p>
                   </div>
-
                   {storeSettings.bank_name_2 && (
                     <div onClick={() => handleCopy(storeSettings.bank_account_2, 'No. Rek ' + storeSettings.bank_name_2)} className="bg-gradient-to-r from-yellow-500 to-yellow-600 p-4 rounded-xl shadow-md text-white cursor-pointer relative overflow-hidden group">
                       <div className="flex justify-between items-start mb-2">
@@ -235,42 +226,31 @@ export default function Cart() {
                       <p className="text-xs opacity-80 mt-1">a.n. {storeSettings.bank_owner_2}</p>
                     </div>
                   )}
-
                   <p className="text-center text-sm text-gray-500">{t('click_to_copy')}</p>
                 </div>
               )}
 
-              {/* RINGKASAN TOTAL & KODE UNIK */}
               <div className="border-t pt-3 mt-3 space-y-2 text-sm text-gray-600">
                 <div className="flex justify-between"><span>{t('subtotal')}</span><span>Rp {cartTotal.toLocaleString('id-ID')}</span></div>
                 {!isPickup && <div className="flex justify-between"><span>{t('shipping_cost')}</span><span>Rp {finalShipping.toLocaleString('id-ID')}</span></div>}
                 
-                {/* KOTAK TOTAL TAGIHAN (DIBIKIN MENCOROK) */}
                 <div className="bg-orange-50 border-2 border-orange-500 rounded-xl p-4 mt-3 relative overflow-hidden">
                   <div className="absolute top-0 right-0 bg-orange-500 text-white text-[10px] font-bold px-3 py-1 rounded-bl-xl">WAJIB TRANSFER PERSIS</div>
                   <p className="text-xs text-gray-600 font-bold mb-1 mt-2">{t('total_transfer')}</p>
                   <p className="text-3xl font-bold text-orange-600 mb-2">Rp {grandTotal.toLocaleString('id-ID')}</p>
-                  
                   <div className="bg-white/60 p-2 rounded-lg border border-orange-200">
                     <p className="text-[11px] text-gray-700 leading-relaxed">
                       <b>Penting:</b> Transfer sampai 3 angka terakhir (<b className="text-red-600">{uniqueCode}</b>). 
-                      Jika nominal berbeda (meski hanya Rp 1), pesanan <b>TIDAK AKAN DIVALIDASI</b> oleh sistem.
+                      Jika nominal berbeda, pesanan <b>TIDAK AKAN DIVALIDASI</b>.
                     </p>
                   </div>
                 </div>
 
-                {/* CHECKBOX KONFIRMASI */}
                 <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 mt-3">
                   <label className="flex items-start gap-3 cursor-pointer">
-                    <input 
-                      type="checkbox" 
-                      checked={syaratTransfer} 
-                      onChange={(e) => setSyaratTransfer(e.target.checked)} 
-                      className="w-5 h-5 mt-0.5 text-orange-500 rounded focus:ring-orange-500 cursor-pointer" 
-                      required
-                    />
+                    <input type="checkbox" checked={syaratTransfer} onChange={(e) => setSyaratTransfer(e.target.checked)} className="w-5 h-5 mt-0.5 text-orange-500 rounded focus:ring-orange-500 cursor-pointer" required />
                     <span className="text-xs font-bold text-gray-700 leading-snug">
-                      Saya menyatakan sudah transfer sebesar <span className="text-orange-600">Rp {grandTotal.toLocaleString('id-ID')}</span> (termasuk kode unik) ke rekening toko.
+                      Saya menyatakan sudah transfer sebesar <span className="text-orange-600">Rp {grandTotal.toLocaleString('id-ID')}</span> ke rekening toko.
                     </span>
                   </label>
                 </div>
@@ -286,11 +266,7 @@ export default function Cart() {
             type="button"
             onClick={(e) => handleCheckout(e as any)}
             disabled={isLoading || !syaratTransfer}
-            className={`w-full py-3.5 rounded-xl font-bold text-base transition-all ${
-              (!syaratTransfer || isLoading) 
-                ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
-                : 'bg-[#F59E0B] text-white shadow-lg hover:bg-[#D97706]'
-            }`}
+            className={`w-full py-3.5 rounded-xl font-bold text-base transition-all ${(!syaratTransfer || isLoading) ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-[#F59E0B] text-white shadow-lg hover:bg-[#D97706]'}`}
           >
             {isLoading ? t('processing') : !syaratTransfer ? 'Centang Konfirmasi Transfer' : t('order_now')}
           </button>

@@ -137,14 +137,14 @@ export default function Reupload() {
           <div className="border-t border-dashed border-gray-200 pt-3 flex justify-between items-center">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center text-orange-500">
-                <span className="font-bold text-xs">BCA</span>
+                <span className="font-bold text-xs">BRI</span>
               </div>
               <div>
-                <p className="text-[10px] font-bold text-gray-800">Bank Central Asia</p>
-                <p className="text-[9px] text-gray-500">a.n Bananta Sultan Resto</p>
+                <p className="text-[10px] font-bold text-gray-800">Bank Rakyat Indonesia</p>
+                <p className="text-[9px] text-gray-500">a.n  Sri Hijrawati</p>
               </div>
             </div>
-            <p className="font-mono text-sm font-bold text-gray-700">8881 2349 881</p>
+            <p className="font-mono text-sm font-bold text-gray-700">488801030792532 </p>
           </div>
         </div>
 
