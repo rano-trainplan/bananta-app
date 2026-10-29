@@ -171,44 +171,44 @@ export default function Tracking() {
               <div className="absolute top-1/2 right-4 -translate-y-1/2 bg-white p-2 rounded-full shadow-lg border border-gray-100 z-10"><Navigation size={16} className="text-green-500" /><span className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[9px] font-bold text-gray-500 bg-white/80 px-1 rounded">Tujuan</span></div>
             </div>
 
-                        {/* INFO KURIR YANG JELAS */}
+                                    {/* INFO KURIR YANG JELAS */}
             <div className="p-4 border-t border-gray-100 bg-white relative z-10">
               <div className="flex items-center gap-3">
-                {/* Foto Kurir */}
+                {/* FOTO ASLI KURIR */}
                 <img 
                   src={order.courier_photo || `https://ui-avatars.com/api/?name=${order.courier_name || 'Kurir'}&background=F59E0B&color=fff`} 
                   alt="Kurir" 
-                  className={`w-12 h-12 rounded-full object-cover border-2 ${order.status === 'Dikirim' || order.status === 'Selesai' ? 'border-orange-100' : 'border-gray-200 grayscale'}`} 
+                  className={`w-14 h-14 rounded-full object-cover border-2 ${order.status === 'Dikirim' || order.status === 'Selesai' ? 'border-orange-100' : 'border-gray-200 grayscale'}`} 
                 />
                 
                 <div className="flex-1">
-                  {/* Nama Kurir & Status */}
-                  <div className="flex items-center gap-1.5">
-                    <h3 className={`font-bold text-sm ${order.status === 'Mencari Kurir' ? 'text-orange-500 animate-pulse' : 'text-gray-800'}`}>
-                      {order.status === 'Mencari Kurir' ? 'Mencari Kurir...' : 
-                       order.status === 'Dikirim' ? order.courier_name : 
-                       order.status === 'Selesai' ? order.courier_name : 
-                       order.courier_name || t('courier_search')}
-                    </h3>
-                  </div>
+                  {/* NAMA KURIR */}
+                  <h3 className={`font-bold text-sm ${order.status === 'Mencari Kurir' ? 'text-orange-500 animate-pulse' : 'text-gray-800'}`}>
+                    {order.status === 'Mencari Kurir' ? 'Mencari Kurir...' : 
+                     order.courier_name || 'Kurir Bananta'}
+                  </h3>
                   
-                  {/* Detail Motor & Plat */}
+                  {/* PLAT & MOTOR */}
                   {(order.status === 'Dikirim' || order.status === 'Selesai') && (
                     <p className="text-[10px] text-gray-500 font-mono mt-1 bg-gray-100 px-2 py-1 rounded-md inline-block">
-                      {order.courier_plate || 'Plat Tidak Diketahui'} • Motor
+                      {order.courier_plate || 'Plat -'} • {order.vehicle_type || 'Motor'}
                     </p>
                   )}
 
-                  {/* Status Teks (Menuju Alamat) */}
+                  {/* STATUS TEKS */}
                   {order.status === 'Dikirim' && (
-                    <p className="text-[10px] text-orange-600 font-bold mt-1">Sedang menuju ke alamat Anda</p>
+                    <p className="text-[10px] text-orange-600 font-bold mt-1 flex items-center gap-1">
+                      <Navigation size={10}/> Sedang menuju ke alamat Anda
+                    </p>
                   )}
                   {order.status === 'Selesai' && (
-                    <p className="text-[10px] text-green-600 font-bold mt-1">Pesanan telah diterima</p>
+                    <p className="text-[10px] text-green-600 font-bold mt-1 flex items-center gap-1">
+                      <CheckCircle size={10}/> Pesanan telah diterima
+                    </p>
                   )}
                 </div>
 
-                {/* Tombol WA & Telpon */}
+                {/* TOMBOL WA & TELPON */}
                 {(order.status === 'Dikirim' || order.status === 'Selesai') && order.courier_phone && (
                   <div className="flex gap-2">
                     <a href={`https://wa.me/${order.courier_phone}`} target="_blank" rel="noreferrer" className="p-2 bg-green-50 text-green-600 rounded-full hover:bg-green-100 transition-colors">
