@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Trash2, Plus, Minus, ArrowLeft, X, Image as ImageIcon, Store, Bike, Copy, Check, ShoppingBag } from 'lucide-react';
+import { Trash2, Plus, Minus, ArrowLeft, Store, Bike, Copy, Check, ShoppingBag } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
@@ -14,9 +14,7 @@ export default function Cart() {
   const [nama, setNama] = useState('');
   const [noHp, setNoHp] = useState('');
   const [alamat, setAlamat] = useState('');
-  const [metode, setMetode] = useState('Transfer Bank');
-  const [buktiTransfer, setBuktiTransfer] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [metode, setMetode] = useState('Transfer Bank'); 
   const [isLoading, setIsLoading] = useState(false);
   const [deliveryType, setDeliveryType] = useState<'Ambil di Toko' | 'Diantar Kurir'>('Diantar Kurir');
   const [pickupTime, setPickupTime] = useState('');
@@ -25,6 +23,10 @@ export default function Cart() {
   const [shippingCost, setShippingCost] = useState(0);
   const [storeSettings, setStoreSettings] = useState<any>(null);
   const [copied, setCopied] = useState<string | null>(null);
+  const [syaratTransfer, setSyaratTransfer] = useState(false); // STATE CHECKBOX
+
+  // KODE UNIK
+  const [uniqueCode, setUniqueCode] = useState(0);
 
   useEffect(() => {
     async function fetchData() {
@@ -38,60 +40,10 @@ export default function Cart() {
       if (settings) setStoreSettings(settings);
     }
     fetchData();
-    processQueue(); // Coba kirim antrean pas halaman dibuka
+
+    // Generate kode unik pas pertama kali buka halaman
+    setUniqueCode(Math.floor(Math.random() * 900) + 100); 
   }, []);
-
-  // FUNGSI PENGIRIMAN KE SUPABASE (Dipisah biar bisa dipake antrean)
-  const processOrder = async (orderData: any, items: any[]) => {
-    const { data: newOrder, error: orderError } = await supabase
-      .from('orders')
-      .insert([orderData])
-      .select()
-      .single();
-
-    if (orderError) throw orderError;
-
-    const itemsToInsert = items.map(item => ({
-      order_id: newOrder.id,
-      product_name: item.name,
-      quantity: item.quantity,
-      price: item.price
-    }));
-    await supabase.from('order_items').insert(itemsToInsert);
-
-    // Potong Stok
-    for (const item of items) {
-      const { data: productData } = await supabase.from('products').select('stock').eq('id', item.id).single();
-      if (productData) {
-        const currentStock = productData.stock || 0;
-        const newStock = Math.max(0, currentStock - item.quantity);
-        await supabase.from('products').update({ stock: newStock }).eq('id', item.id);
-      }
-    }
-
-    return newOrder;
-  };
-
-  // FUNGSI CEK ANTREAN DI HP
-  const processQueue = async () => {
-    const queue = JSON.parse(localStorage.getItem('order_queue') || '[]');
-    if (queue.length === 0) return;
-
-    for (const item of queue) {
-      try {
-        const newOrder = await processOrder(item.orderData, item.items);
-        // Kalau berhasil, simpan ID ke riwayat HP
-        const existingOrders = JSON.parse(localStorage.getItem('my_orders') || '[]');
-        localStorage.setItem('my_orders', JSON.stringify([...existingOrders, newOrder.id]));
-        toast.success("Pesanan tertunda berhasil dikirim!");
-      } catch (err) {
-        console.log("Gagal kirim antrean, coba lagi nanti.", err);
-        break; // Berhenti kalau masih gagal (sinyal jelek)
-      }
-    }
-    // Hapus antrean yang udah sukses
-    localStorage.removeItem('order_queue');
-  };
 
   const handleCopy = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
@@ -107,64 +59,69 @@ export default function Cart() {
     setShippingCost(area ? area.cost : 0);
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) { setBuktiTransfer(file); setPreviewUrl(URL.createObjectURL(file)); }
-  };
-
-  const handleRemovePhoto = () => { setBuktiTransfer(null); setPreviewUrl(null); };
-
   const isPickup = deliveryType === 'Ambil di Toko';
   const finalShipping = isPickup ? 0 : shippingCost;
-  const grandTotal = cartTotal + finalShipping;
+  
+  const baseTotal = cartTotal + finalShipping;
+  const grandTotal = baseTotal + uniqueCode; // Total Akhir + Kode Unik
 
   const handleCheckout = async (e: React.FormEvent) => {
     e.preventDefault();
     if (cart.length === 0) return alert("Keranjang masih kosong!");
     if (!nama || !noHp) return alert("Harap isi nama dan no HP!");
     if (!isPickup && !alamat) return alert("Harap isi alamat pengiriman!");
-    if (!buktiTransfer) return alert("Harap upload bukti pembayaran!");
     if (isPickup && !pickupTime) return alert("Harap pilih jadwal pengambilan!");
+    if (!syaratTransfer) return alert("Harap centang pernyataan bahwa Anda sudah transfer!");
 
     setIsLoading(true);
-    const orderData = {
-      customer_name: nama,
-      phone: noHp,
-      order_type: 'Online',
-      address: isPickup ? 'Ambil di Toko' : alamat,
-      total_price: grandTotal,
-      payment_method: metode,
-      status: 'Dibuat',
-      delivery_type: deliveryType,
-      pickup_time: pickupTime ? new Date(pickupTime).toISOString() : null,
-      shipping_cost: finalShipping
-    };
-
     try {
-      const fileExt = buktiTransfer.name.split('.').pop();
-      const fileName = `proof-${Date.now()}.${fileExt}`;
-      const { error: uploadError } = await supabase.storage.from('uploads').upload(fileName, buktiTransfer);
-      if (uploadError) throw uploadError;
-      const { data: urlData } = supabase.storage.from('uploads').getPublicUrl(fileName);
-      
-      const newOrder = await processOrder({ ...orderData, payment_proof: urlData.publicUrl }, cart);
-      
-      toast.success("Pesanan berhasil dibuat!");
+      // 1. Simpan Pesanan (TANPA UPLOAD GAMBAR)
+      const { data: orderData, error: orderError } = await supabase
+        .from('orders')
+        .insert([{
+          customer_name: nama,
+          phone: noHp,
+          order_type: 'Online',
+          address: isPickup ? 'Ambil di Toko' : alamat,
+          total_price: grandTotal, 
+          payment_method: metode,
+          status: 'Validasi', // Langsung masuk ke Admin buat dicek
+          delivery_type: deliveryType,
+          pickup_time: pickupTime ? new Date(pickupTime).toISOString() : null,
+          shipping_cost: finalShipping
+        }])
+        .select()
+        .single();
+
+      if (orderError) throw orderError;
+
+      // 2. Simpan Item & Potong Stok
+      const itemsToInsert = cart.map(item => ({
+        order_id: orderData.id,
+        product_name: item.name,
+        quantity: item.quantity,
+        price: item.price
+      }));
+      await supabase.from('order_items').insert(itemsToInsert);
+
+      for (const item of cart) {
+        const { data: productData } = await supabase.from('products').select('stock').eq('id', item.id).single();
+        if (productData) {
+          const currentStock = productData.stock || 0;
+          const newStock = Math.max(0, currentStock - item.quantity);
+          await supabase.from('products').update({ stock: newStock }).eq('id', item.id);
+        }
+      }
+
+      toast.success("Pesanan dibuat! Menunggu validasi Admin.");
       cart.forEach(item => removeFromCart(item.id));
       const existingOrders = JSON.parse(localStorage.getItem('my_orders') || '[]');
-      localStorage.setItem('my_orders', JSON.stringify([...existingOrders, newOrder.id]));
-      navigate(`/tracking/${newOrder.id}`);
-
+      localStorage.setItem('my_orders', JSON.stringify([...existingOrders, orderData.id]));
+      navigate(`/tracking/${orderData.id}`);
+      
     } catch (error: any) {
       console.error(error);
-      // KALAU GAGAL (SINYAL JELEK), SIMPEN KE ANTREAN
-      const queue = JSON.parse(localStorage.getItem('order_queue') || '[]');
-      queue.push({ orderData, items: cart });
-      localStorage.setItem('order_queue', JSON.stringify(queue));
-      
-      toast.error("Sinyal lemah. Pesanan disimpan di HP, akan dikirim otomatis saat sinyal membaik.", { duration: 5000 });
-      cart.forEach(item => removeFromCart(item.id));
-      navigate('/');
+      alert("Gagal membuat pesanan. Sinyal internet Anda mungkin sedang lemah. Silakan coba lagi.");
     } finally {
       setIsLoading(false);
     }
@@ -279,33 +236,43 @@ export default function Cart() {
                   )}
 
                   <p className="text-center text-sm text-gray-500">{t('click_to_copy')}</p>
-                  <div className="bg-gray-50 p-3 rounded-lg text-center border">
-                    <p className="text-sm font-bold text-gray-600">{t('total_transfer')}</p>
-                    <p className="text-xl font-bold text-[#F59E0B]">Rp {grandTotal.toLocaleString('id-ID')}</p>
-                  </div>
                 </div>
               )}
 
-              <div>
-                <label className="text-xs text-red-500 mb-1 block font-bold">{t('upload_proof')}</label>
-                {!previewUrl ? (
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center cursor-pointer relative">
-                    <input type="file" accept="image/*" onChange={handleFileChange} className="absolute inset-0 opacity-0 cursor-pointer" />
-                    <ImageIcon className="mx-auto text-gray-400 mb-1" size={24} />
-                    <p className="text-xs text-gray-500">{t('choose_image')}</p>
-                  </div>
-                ) : (
-                  <div className="relative">
-                    <img src={previewUrl} alt="Preview" className="w-full h-40 object-cover rounded-lg" />
-                    <button type="button" onClick={handleRemovePhoto} className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full"><X size={14} /></button>
-                  </div>
-                )}
-              </div>
-
-              <div className="border-t pt-3 mt-3 space-y-1 text-sm text-gray-600">
+              {/* RINGKASAN TOTAL & KODE UNIK */}
+              <div className="border-t pt-3 mt-3 space-y-2 text-sm text-gray-600">
                 <div className="flex justify-between"><span>{t('subtotal')}</span><span>Rp {cartTotal.toLocaleString('id-ID')}</span></div>
                 {!isPickup && <div className="flex justify-between"><span>{t('shipping_cost')}</span><span>Rp {finalShipping.toLocaleString('id-ID')}</span></div>}
-                <div className="flex justify-between font-bold text-lg text-[#F59E0B] mt-2"><span>{t('total')}</span><span>Rp {grandTotal.toLocaleString('id-ID')}</span></div>
+                
+                {/* KOTAK TOTAL TAGIHAN (DIBIKIN MENCOROK) */}
+                <div className="bg-orange-50 border-2 border-orange-500 rounded-xl p-4 mt-3 relative overflow-hidden">
+                  <div className="absolute top-0 right-0 bg-orange-500 text-white text-[10px] font-bold px-3 py-1 rounded-bl-xl">WAJIB TRANSFER PERSIS</div>
+                  <p className="text-xs text-gray-600 font-bold mb-1 mt-2">{t('total_transfer')}</p>
+                  <p className="text-3xl font-bold text-orange-600 mb-2">Rp {grandTotal.toLocaleString('id-ID')}</p>
+                  
+                  <div className="bg-white/60 p-2 rounded-lg border border-orange-200">
+                    <p className="text-[11px] text-gray-700 leading-relaxed">
+                      <b>Penting:</b> Transfer sampai 3 angka terakhir (<b className="text-red-600">{uniqueCode}</b>). 
+                      Jika nominal berbeda (meski hanya Rp 1), pesanan <b>TIDAK AKAN DIVALIDASI</b> oleh sistem.
+                    </p>
+                  </div>
+                </div>
+
+                {/* CHECKBOX KONFIRMASI */}
+                <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 mt-3">
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      checked={syaratTransfer} 
+                      onChange={(e) => setSyaratTransfer(e.target.checked)} 
+                      className="w-5 h-5 mt-0.5 text-orange-500 rounded focus:ring-orange-500 cursor-pointer" 
+                      required
+                    />
+                    <span className="text-xs font-bold text-gray-700 leading-snug">
+                      Saya menyatakan sudah transfer sebesar <span className="text-orange-600">Rp {grandTotal.toLocaleString('id-ID')}</span> (termasuk kode unik) ke rekening toko.
+                    </span>
+                  </label>
+                </div>
               </div>
             </form>
           </>
@@ -317,14 +284,14 @@ export default function Cart() {
           <button 
             type="button"
             onClick={(e) => handleCheckout(e as any)}
-            disabled={isLoading || !buktiTransfer}
+            disabled={isLoading || !syaratTransfer}
             className={`w-full py-3.5 rounded-xl font-bold text-base transition-all ${
-              (!buktiTransfer || isLoading) 
+              (!syaratTransfer || isLoading) 
                 ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
                 : 'bg-[#F59E0B] text-white shadow-lg hover:bg-[#D97706]'
             }`}
           >
-            {isLoading ? t('processing') : !buktiTransfer ? t('upload_first') : t('order_now')}
+            {isLoading ? t('processing') : !syaratTransfer ? 'Centang Konfirmasi Transfer' : t('order_now')}
           </button>
         </div>
       )}
