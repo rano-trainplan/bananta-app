@@ -77,6 +77,24 @@ export default function Tracking() {
 
   return (
     <div className="pb-24 min-h-screen bg-gray-50 relative">
+      
+      {/* STYLE ANIMASI (Ditaruh paling atas di dalam div utama) */}
+      <style>{`
+        @keyframes ping {
+          75%, 100% { transform: scale(2); opacity: 0; }
+        }
+        .animate-ping {
+          animation: ping 1s cubic-bezier(0, 0, 0.2, 1) infinite;
+        }
+        @keyframes fade-in-up {
+          0% { opacity: 0; transform: translateY(20px); }
+          100% { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in-up {
+          animation: fade-in-up 0.5s ease-out forwards;
+        }
+      `}</style>
+
       <div className="bg-white/80 backdrop-blur-md p-4 rounded-b-3xl shadow-sm mb-4 sticky top-0 z-20 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Link to="/" className="p-2 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors"><ArrowLeft size={18}/></Link>
@@ -256,30 +274,9 @@ export default function Tracking() {
           </div>
         </div>
 
-                <Link to="/" className="block text-center text-sm font-bold bg-[#F59E0B] text-white py-3.5 rounded-xl shadow-lg hover:bg-[#D97706] transition-colors mb-4">{t('back_home')} <ArrowLeft size={16} className="inline ml-1 rotate-180"/></Link>
+        <Link to="/" className="block text-center text-sm font-bold bg-[#F59E0B] text-white py-3.5 rounded-xl shadow-lg hover:bg-[#D97706] transition-colors mb-4">{t('back_home')} <ArrowLeft size={16} className="inline ml-1 rotate-180"/></Link>
       </div>
-
-      {/* TAMBAHKAN STYLE ANIMASI DI SINI */}
-      <style>{`
-        @keyframes ping {
-          75%, 100% {
-            transform: scale(2);
-            opacity: 0;
-          }
-        }
-        .animate-ping {
-          animation: ping 1s cubic-bezier(0, 0, 0.2, 1) infinite;
-        }
-        @keyframes fade-in-up {
-          0% { opacity: 0; transform: translateY(20px); }
-          100% { opacity: 1; transform: translateY(0); }
-        }
-        .animate-fade-in-up {
-          animation: fade-in-up 0.5s ease-out forwards;
-        }
-      `}</style>
-
-         <BottomNav />
-      </div>
-    );
+      <BottomNav />
+    </div>
+  );
 }
