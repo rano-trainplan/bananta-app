@@ -14,6 +14,7 @@ export default function Courier() {
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [detailOrder, setDetailOrder] = useState<any>(null); 
   const [proofPhoto, setProofPhoto] = useState<File | null>(null);
+  const [deliveryNote, setDeliveryNote] = useState(''); // <-- STATE BARU
   const [activeTab, setActiveTab] = useState<'tugas' | 'riwayat' | 'pendapatan'>('tugas');
 
   // STATE SESSION
@@ -85,14 +86,11 @@ export default function Courier() {
         fetchData();
       })
       .subscribe((status) => {
-        // Kalau koneksi putus, coba sambung lagi tiap 3 detik
         if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          console.log('Koneksi Realtime Putus, mencoba sambung ulang...');
           setTimeout(() => channel.subscribe(), 3000);
         }
       });
 
-    // TAMBAHAN: Paksa tarik data tiap 15 detik (jaga-jaga kalau realtime mati total)
     const interval = setInterval(() => {
       fetchData();
     }, 15000);
@@ -159,9 +157,12 @@ export default function Courier() {
     if (uploadError) return toast.error("Gagal upload bukti.");
     
     const { data: urlData } = supabase.storage.from('uploads').getPublicUrl(fileName);
+    
+    // UPDATE DATABASE DENGAN CATATAN
     const { error } = await supabase.from('orders').update({ 
       status: 'Selesai', 
-      proof_of_delivery: urlData.publicUrl 
+      proof_of_delivery: urlData.publicUrl,
+      delivery_note: deliveryNote // <-- SIMPEN CATATAN
     }).eq('id', selectedOrder.id);
     
     if (error) toast.error("Gagal selesaikan pesanan");
@@ -169,6 +170,7 @@ export default function Courier() {
       toast.success("Pesanan selesai!"); 
       setSelectedOrder(null); 
       setProofPhoto(null); 
+      setDeliveryNote(''); // <-- RESET CATATAN
       fetchData(); 
       setActiveTab('riwayat'); 
     }
@@ -670,9 +672,21 @@ export default function Courier() {
               <label className="text-xs text-gray-600 font-bold mb-2 block">Foto Bukti Terima</label>
               <input type="file" accept="image/*" onChange={e => setProofPhoto(e.target.files?.[0] || null)} className="w-full border border-gray-200 p-2 rounded-xl text-sm bg-gray-50 focus:ring-2 focus:ring-orange-500 outline-none" required />
             </div>
+
+            {/* INPUT CATATAN BARU */}
+            <div>
+              <label className="text-xs text-gray-600 font-bold mb-2 block">Catatan Pengantaran (Opsional)</label>
+              <input 
+                type="text" 
+                value={deliveryNote} 
+                onChange={e => setDeliveryNote(e.target.value)} 
+                placeholder="Cth: Dititip ke satpam / Taruh di depan pintu" 
+                className="w-full border border-gray-200 p-2 rounded-xl text-sm bg-gray-50 focus:ring-2 focus:ring-orange-500 outline-none" 
+              />
+            </div>
             
             <div className="flex gap-2 pt-2">
-              <button type="button" onClick={() => { setSelectedOrder(null); setProofPhoto(null); }} className="flex-1 bg-gray-100 py-3 rounded-xl font-bold text-sm text-gray-600 hover:bg-gray-200 transition-colors">Batal</button>
+              <button type="button" onClick={() => { setSelectedOrder(null); setProofPhoto(null); setDeliveryNote(''); }} className="flex-1 bg-gray-100 py-3 rounded-xl font-bold text-sm text-gray-600 hover:bg-gray-200 transition-colors">Batal</button>
               <button type="submit" className="flex-1 bg-orange-500 text-white py-3 rounded-xl font-bold text-sm hover:bg-orange-600 transition-colors shadow-md">Selesai</button>
             </div>
           </form>
