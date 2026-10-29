@@ -139,19 +139,18 @@ export default function Tracking() {
           </div>
         )}
 
-        {/* PETA & KURIR (MUNCUL PAS DIKIRIM / SELESAI) */}
-        {(order.status === 'Dikirim' || order.status === 'Selesai') && (
+        {/* PETA & KURIR (MUNCUL DARI AWAL SAMPAI SELESAI) */}
+        {(order.status !== 'Dibatalkan' && order.status !== 'Menunggu Pembayaran') && (
           <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden relative">
             <div className="h-48 relative overflow-hidden bg-gray-200">
               
-              {/* GANTI BACKGROUND JADI GAMBAR PETA ASLI */}
+              {/* BACKGROUND GAMBAR PETA */}
               <img 
                 src="https://images.unsplash.com/photo-1524661135-423995f22d0b?q=80&w=600&auto=format&fit=crop" 
                 alt="Map" 
                 className="absolute inset-0 w-full h-full object-cover opacity-60 grayscale-[30%]" 
               />
               
-              {/* OVERLAY GRADASI BIAR RAPI */}
               <div className="absolute inset-0 bg-gradient-to-t from-white/80 to-transparent"></div>
 
               <svg className="absolute top-1/2 left-10 right-10 w-[calc(100%-80px)] h-10 -translate-y-1/2" preserveAspectRatio="none">
@@ -160,8 +159,13 @@ export default function Tracking() {
               
               <div className="absolute top-1/2 left-4 -translate-y-1/2 bg-white p-2 rounded-full shadow-lg border border-gray-100 z-10"><Store size={16} className="text-orange-500" /><span className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[9px] font-bold text-gray-500 bg-white/80 px-1 rounded">Resto</span></div>
               
-              <div className={`absolute top-1/2 z-10 transition-all duration-1000 ease-in-out ${order.status === 'Dikirim' ? 'left-1/2 -translate-x-1/2 animate-bounce' : 'right-4 -translate-y-1/2 translate-x-1/2'}`}>
-                <div className="bg-orange-500 p-2.5 rounded-full shadow-lg border-2 border-white"><Bike size={18} className="text-white" /></div>
+              {/* IKON KURIR DINAMIS */}
+              <div className={`absolute top-1/2 z-10 transition-all duration-1000 ease-in-out ${
+                order.status === 'Dikirim' ? 'left-1/2 -translate-x-1/2 animate-bounce' : 
+                order.status === 'Selesai' ? 'right-4 -translate-y-1/2 translate-x-1/2' :
+                'left-1/2 -translate-x-1/2 opacity-50'
+              }`}>
+                <div className={`${order.status === 'Dikirim' ? 'bg-orange-500' : 'bg-gray-400'} p-2.5 rounded-full shadow-lg border-2 border-white`}><Bike size={18} className="text-white" /></div>
               </div>
               
               <div className="absolute top-1/2 right-4 -translate-y-1/2 bg-white p-2 rounded-full shadow-lg border border-gray-100 z-10"><Navigation size={16} className="text-green-500" /><span className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[9px] font-bold text-gray-500 bg-white/80 px-1 rounded">Tujuan</span></div>
@@ -169,25 +173,36 @@ export default function Tracking() {
 
             <div className="p-4 border-t border-gray-100 bg-white relative z-10">
               <div className="flex items-center gap-3">
-                <img src={order.courier_photo || `https://ui-avatars.com/api/?name=${order.courier_name || 'Kurir'}&background=F59E0B&color=fff`} alt="Kurir" className="w-12 h-12 rounded-full object-cover border-2 border-orange-100" />
+                <img 
+                  src={order.courier_photo || `https://ui-avatars.com/api/?name=${order.courier_name || 'Kurir'}&background=F59E0B&color=fff`} 
+                  alt="Kurir" 
+                  className={`w-12 h-12 rounded-full object-cover border-2 ${order.status === 'Dikirim' || order.status === 'Selesai' ? 'border-orange-100' : 'border-gray-200 grayscale'}`} 
+                />
                 <div className="flex-1">
-                  <div className="flex items-center gap-1.5"><h3 className="font-bold text-sm text-gray-800">{order.courier_name || t('courier_search')}</h3></div>
-                  <p className="text-[10px] text-gray-500 font-mono mt-0.5 bg-gray-100 px-1.5 py-0.5 rounded inline-block">{order.courier_plate || '-'} • Vario Hitam</p>
-                </div>
-                <div className="flex gap-2">
-                  {order.courier_phone && (
-                    <>
-                      <a href={`https://wa.me/${order.courier_phone}`} target="_blank" rel="noreferrer" className="p-2 bg-green-50 text-green-600 rounded-full hover:bg-green-100 transition-colors"><MessageCircle size={16} /></a>
-                      <a href={`tel:${order.courier_phone}`} className="p-2 bg-blue-50 text-blue-600 rounded-full hover:bg-blue-100 transition-colors"><Phone size={16} /></a>
-                    </>
+                  <div className="flex items-center gap-1.5">
+                    <h3 className={`font-bold text-sm ${order.status === 'Mencari Kurir' ? 'text-orange-500 animate-pulse' : 'text-gray-800'}`}>
+                      {order.status === 'Mencari Kurir' ? 'Mencari Kurir...' : 
+                       order.status === 'Dikirim' ? 'Menuju ke Alamat' : 
+                       order.status === 'Selesai' ? 'Pesanan Selesai' : 
+                       order.courier_name || t('courier_search')}
+                    </h3>
+                  </div>
+                  {(order.status === 'Dikirim' || order.status === 'Selesai') && (
+                    <p className="text-[10px] text-gray-500 font-mono mt-0.5 bg-gray-100 px-1.5 py-0.5 rounded inline-block">{order.courier_name} • {order.courier_plate || '-'}</p>
                   )}
                 </div>
+                {(order.status === 'Dikirim' || order.status === 'Selesai') && order.courier_phone && (
+                  <div className="flex gap-2">
+                    <a href={`https://wa.me/${order.courier_phone}`} target="_blank" rel="noreferrer" className="p-2 bg-green-50 text-green-600 rounded-full hover:bg-green-100 transition-colors"><MessageCircle size={16} /></a>
+                    <a href={`tel:${order.courier_phone}`} className="p-2 bg-blue-50 text-blue-600 rounded-full hover:bg-blue-100 transition-colors"><Phone size={16} /></a>
+                  </div>
+                )}
               </div>
             </div>
           </div>
         )}
 
-        {/* TIMELINE ANIMASI BARU */}
+        {/* TIMELINE ANIMASI */}
         {(order.status !== 'Dibatalkan' && order.status !== 'Menunggu Pembayaran') && (
           <div className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100">
             <div className="flex justify-between items-center mb-5">
@@ -197,10 +212,7 @@ export default function Tracking() {
             
             <div className="relative pl-6 space-y-6">
               <div className="absolute left-2.5 top-2 bottom-2 w-0.5 bg-gray-100 rounded-full overflow-hidden">
-                <div 
-                  className="bg-green-500 w-full transition-all duration-1000 ease-in-out" 
-                  style={{ height: `${(currentIndex / (statusOrder.length - 1)) * 100}%` }}
-                ></div>
+                <div className="bg-green-500 w-full transition-all duration-1000 ease-in-out" style={{ height: `${(currentIndex / (statusOrder.length - 1)) * 100}%` }}></div>
               </div>
 
               {[
@@ -221,25 +233,17 @@ export default function Tracking() {
                       'bg-white border-gray-200 text-gray-300 scale-100'
                     }`}>
                       <Icon size={12} strokeWidth={3} />
-                      {status === 'active' && (
-                        <span className="absolute inset-0 rounded-full bg-orange-400 animate-ping opacity-75"></span>
-                      )}
+                      {status === 'active' && <span className="absolute inset-0 rounded-full bg-orange-400 animate-ping opacity-75"></span>}
                     </div>
                     
                     <div className={`${status === 'pending' ? 'opacity-40' : 'opacity-100'} ml-2 transition-opacity duration-500`}>
                       <div className="flex justify-between items-start">
-                        <p className={`text-sm font-bold transition-colors duration-300 ${
-                          status === 'active' ? 'text-orange-600' : 
-                          status === 'done' ? 'text-green-700' : 
-                          'text-gray-800'
-                        }`}>
+                        <p className={`text-sm font-bold transition-colors duration-300 ${status === 'active' ? 'text-orange-600' : status === 'done' ? 'text-green-700' : 'text-gray-800'}`}>
                           {step.label}
                           {status === 'active' && <span className="ml-2 text-[9px] bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded-full animate-pulse">Aktif</span>}
                         </p>
                         {status !== 'pending' && step.time && (
-                          <p className="text-[10px] text-gray-400 font-medium">
-                            {new Date(step.time).toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit'})}
-                          </p>
+                          <p className="text-[10px] text-gray-400 font-medium">{new Date(step.time).toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit'})}</p>
                         )}
                       </div>
                       {status !== 'pending' && <p className="text-[10px] text-gray-500 mt-0.5">{step.sub}</p>}
@@ -254,14 +258,8 @@ export default function Tracking() {
         {/* BUKTI PENGANTARAN KURIR (MUNCUL PAS SELESAI) */}
         {order.status === 'Selesai' && order.proof_of_delivery && (
           <div className="bg-white p-4 rounded-3xl shadow-sm border border-green-200 mb-2 animate-fade-in-up">
-            <h3 className="font-bold text-sm text-green-600 mb-3 flex items-center gap-2">
-              <CheckCircle size={16} /> Bukti Pengantaran Kurir
-            </h3>
-            <img 
-              src={order.proof_of_delivery} 
-              alt="Bukti Terima" 
-              className="w-full h-auto max-h-64 object-cover rounded-xl border border-gray-200 shadow-sm" 
-            />
+            <h3 className="font-bold text-sm text-green-600 mb-3 flex items-center gap-2"><CheckCircle size={16} /> Bukti Pengantaran Kurir</h3>
+            <img src={order.proof_of_delivery} alt="Bukti Terima" className="w-full h-auto max-h-64 object-cover rounded-xl border border-gray-200 shadow-sm" />
             <p className="text-[10px] text-center text-gray-400 mt-2 italic">Pesanan telah diterima oleh pelanggan.</p>
           </div>
         )}
@@ -270,10 +268,7 @@ export default function Tracking() {
         <div className="bg-white p-4 rounded-3xl shadow-sm border border-gray-100 space-y-4">
           <div className="flex items-start gap-3">
             <div className="bg-orange-50 p-2 rounded-full text-orange-500 mt-0.5"><Navigation size={16}/></div>
-            <div>
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">{t('destination')}</p>
-              <p className="text-xs font-bold text-gray-800">{order.address}</p>
-            </div>
+            <div><p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">{t('destination')}</p><p className="text-xs font-bold text-gray-800">{order.address}</p></div>
           </div>
           <div className="border-t border-dashed pt-3 flex justify-between items-center text-xs">
             <p className="text-gray-500">{order.order_items?.length || 0} Menu • {order.payment_method}</p>
