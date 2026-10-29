@@ -12,9 +12,19 @@ export default function Admin() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [filterStatus, setFilterStatus] = useState('Semua');
 
-  const today = new Date().toISOString().split('T')[0];
+    const today = new Date().toISOString().split('T')[0];
   const [startDate, setStartDate] = useState(today);
   const [endDate, setEndDate] = useState(today);
+
+  // TAMBAHKAN KODE INI
+  useEffect(() => {
+    const currentToday = new Date().toISOString().split('T')[0];
+    // Kalau tanggal awal beda sama hari ini, paksa ganti ke hari ini
+    if (startDate !== currentToday) {
+      setStartDate(currentToday);
+      setEndDate(currentToday);
+    }
+  }, []); 
 
   useEffect(() => {
     fetchOrders();
