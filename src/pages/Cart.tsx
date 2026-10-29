@@ -65,15 +65,23 @@ export default function Cart() {
 
   const handleCheckout = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // 1. VALIDASI SUPER KETAT (ANTI DATA KOSONG)
     if (cart.length === 0) return alert("Keranjang masih kosong!");
-    if (!nama || !noHp) return alert("Harap isi nama dan no HP!");
-    if (!isPickup && !alamat) return alert("Harap isi alamat pengiriman!");
-    if (isPickup && !pickupTime) return alert("Harap pilih jadwal pengambilan!");
-    if (!syaratTransfer) return alert("Harap centang pernyataan bahwa Anda sudah transfer!");
+    if (!nama || nama.trim() === "") return alert("Nama wajib diisi!");
+    if (!noHp || noHp.trim() === "") return alert("No HP wajib diisi!");
+    if (!isPickup && (!alamat || alamat.trim() === "")) return alert("Alamat wajib diisi!");
+    if (isPickup && !pickupTime) return alert("Jadwal ambil wajib diisi!");
+    if (!syaratTransfer) return alert("Harap centang pernyataan sudah transfer!");
+    
+    // Pastikan total harga itu angka valid
+    if (isNaN(grandTotal) || grandTotal <= 0) {
+      return alert("Total tagihan tidak valid. Coba refresh halaman.");
+    }
 
     setIsLoading(true);
     try {
-      // SIMPAN PESANAN DENGAN STATUS MENUNGGU PEMBAYARAN
+      // 2. SIMPAN PESANAN
       const { data: orderData, error: orderError } = await supabase
         .from('orders')
         .insert([{
@@ -81,12 +89,12 @@ export default function Cart() {
           phone: noHp,
           order_type: 'Online',
           address: isPickup ? 'Ambil di Toko' : alamat,
-          total_price: grandTotal, 
+          total_price: Number(grandTotal), // PAKSA JADI ANGKA
           payment_method: metode,
-          status: 'Menunggu Pembayaran', // <--- STATUS BARU
+          status: 'Menunggu Pembayaran', 
           delivery_type: deliveryType,
           pickup_time: pickupTime ? new Date(pickupTime).toISOString() : null,
-          shipping_cost: finalShipping,
+          shipping_cost: Number(finalShipping), // PAKSA JADI ANGKA
           payment_proof: 'TF_MANUAL' 
         }])
         .select()
@@ -94,12 +102,12 @@ export default function Cart() {
 
       if (orderError) throw orderError;
 
-      // SIMPAN ITEM & POTONG STOK
+      // 3. SIMPAN ITEM & POTONG STOK
       const itemsToInsert = cart.map(item => ({
         order_id: orderData.id,
         product_name: item.name,
-        quantity: item.quantity,
-        price: item.price
+        quantity: Number(item.quantity),
+        price: Number(item.price)
       }));
       await supabase.from('order_items').insert(itemsToInsert);
 
@@ -120,7 +128,8 @@ export default function Cart() {
       
     } catch (error: any) {
       console.error(error);
-      alert("Gagal membuat pesanan. Coba lagi.");
+      // 4. TAMPILKAN ERROR ASLI DARI SUPABASE
+      alert("Gagal: " + (error.message || "Terjadi kesalahan yang tidak diketahui"));
     } finally {
       setIsLoading(false);
     }
