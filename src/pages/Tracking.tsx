@@ -171,30 +171,52 @@ export default function Tracking() {
               <div className="absolute top-1/2 right-4 -translate-y-1/2 bg-white p-2 rounded-full shadow-lg border border-gray-100 z-10"><Navigation size={16} className="text-green-500" /><span className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[9px] font-bold text-gray-500 bg-white/80 px-1 rounded">Tujuan</span></div>
             </div>
 
+                        {/* INFO KURIR YANG JELAS */}
             <div className="p-4 border-t border-gray-100 bg-white relative z-10">
               <div className="flex items-center gap-3">
+                {/* Foto Kurir */}
                 <img 
                   src={order.courier_photo || `https://ui-avatars.com/api/?name=${order.courier_name || 'Kurir'}&background=F59E0B&color=fff`} 
                   alt="Kurir" 
                   className={`w-12 h-12 rounded-full object-cover border-2 ${order.status === 'Dikirim' || order.status === 'Selesai' ? 'border-orange-100' : 'border-gray-200 grayscale'}`} 
                 />
+                
                 <div className="flex-1">
+                  {/* Nama Kurir & Status */}
                   <div className="flex items-center gap-1.5">
                     <h3 className={`font-bold text-sm ${order.status === 'Mencari Kurir' ? 'text-orange-500 animate-pulse' : 'text-gray-800'}`}>
                       {order.status === 'Mencari Kurir' ? 'Mencari Kurir...' : 
-                       order.status === 'Dikirim' ? 'Menuju ke Alamat' : 
-                       order.status === 'Selesai' ? 'Pesanan Selesai' : 
+                       order.status === 'Dikirim' ? order.courier_name : 
+                       order.status === 'Selesai' ? order.courier_name : 
                        order.courier_name || t('courier_search')}
                     </h3>
                   </div>
+                  
+                  {/* Detail Motor & Plat */}
                   {(order.status === 'Dikirim' || order.status === 'Selesai') && (
-                    <p className="text-[10px] text-gray-500 font-mono mt-0.5 bg-gray-100 px-1.5 py-0.5 rounded inline-block">{order.courier_name} • {order.courier_plate || '-'}</p>
+                    <p className="text-[10px] text-gray-500 font-mono mt-1 bg-gray-100 px-2 py-1 rounded-md inline-block">
+                      {order.courier_plate || 'Plat Tidak Diketahui'} • Motor
+                    </p>
+                  )}
+
+                  {/* Status Teks (Menuju Alamat) */}
+                  {order.status === 'Dikirim' && (
+                    <p className="text-[10px] text-orange-600 font-bold mt-1">Sedang menuju ke alamat Anda</p>
+                  )}
+                  {order.status === 'Selesai' && (
+                    <p className="text-[10px] text-green-600 font-bold mt-1">Pesanan telah diterima</p>
                   )}
                 </div>
+
+                {/* Tombol WA & Telpon */}
                 {(order.status === 'Dikirim' || order.status === 'Selesai') && order.courier_phone && (
                   <div className="flex gap-2">
-                    <a href={`https://wa.me/${order.courier_phone}`} target="_blank" rel="noreferrer" className="p-2 bg-green-50 text-green-600 rounded-full hover:bg-green-100 transition-colors"><MessageCircle size={16} /></a>
-                    <a href={`tel:${order.courier_phone}`} className="p-2 bg-blue-50 text-blue-600 rounded-full hover:bg-blue-100 transition-colors"><Phone size={16} /></a>
+                    <a href={`https://wa.me/${order.courier_phone}`} target="_blank" rel="noreferrer" className="p-2 bg-green-50 text-green-600 rounded-full hover:bg-green-100 transition-colors">
+                      <MessageCircle size={16} />
+                    </a>
+                    <a href={`tel:${order.courier_phone}`} className="p-2 bg-blue-50 text-blue-600 rounded-full hover:bg-blue-100 transition-colors">
+                      <Phone size={16} />
+                    </a>
                   </div>
                 )}
               </div>
@@ -278,7 +300,7 @@ export default function Tracking() {
             <p className="text-[10px] text-center text-gray-400 mt-3 italic">Pesanan telah diterima oleh pelanggan.</p>
           </div>
         )}
-        
+
         {/* ALAMAT & RINCIAN */}
         <div className="bg-white p-4 rounded-3xl shadow-sm border border-gray-100 space-y-4">
           <div className="flex items-start gap-3">

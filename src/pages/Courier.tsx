@@ -137,9 +137,13 @@ export default function Courier() {
     setTotalIncome(income);
   }
 
-  const handleTakeTask = async (orderId: string) => {
+    const handleTakeTask = async (orderId: string) => {
     const { error } = await supabase.from('orders').update({ 
       courier_id: currentCourier.id,
+      courier_name: currentCourier.name,       // <-- Simpen Nama
+      courier_phone: currentCourier.phone,     // <-- Simpen No HP
+      courier_plate: currentCourier.plate_number, // <-- Simpen Plat
+      courier_photo: currentCourier.photo_url,  // <-- Simpen Foto
       status: 'Dikirim'
     }).eq('id', orderId).is('courier_id', null);
     
