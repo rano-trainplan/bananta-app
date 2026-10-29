@@ -12,9 +12,21 @@ export default function Admin() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [filterStatus, setFilterStatus] = useState('Semua');
 
-    const today = new Date().toISOString().split('T')[0];
-  const [startDate, setStartDate] = useState(today);
-  const [endDate, setEndDate] = useState(today);
+   // GANTI BAGIAN INI
+  const getTodayString = () => new Date().toISOString().split('T')[0];
+  const [startDate, setStartDate] = useState(getTodayString());
+  const [endDate, setEndDate] = useState(getTodayString());
+
+  // TAMBAHKAN USE EFFECT INI TEPAT DI BAWAHNYA
+  useEffect(() => {
+    // Cek tiap 1 menit, kalau hari udah ganti, reset tanggal
+    const interval = setInterval(() => {
+      const today = getTodayString();
+      setStartDate(prev => prev !== today ? today : prev);
+      setEndDate(prev => prev !== today ? today : prev);
+    }, 60000); // Cek tiap 60 detik (1 menit)
+    return () => clearInterval(interval);
+  }, []);
 
   // TAMBAHKAN KODE INI
   useEffect(() => {

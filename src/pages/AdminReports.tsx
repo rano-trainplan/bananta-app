@@ -8,8 +8,18 @@ import AnimatedNumber from '../components/ui/AnimatedNumber';
 export default function AdminReports() {
   const [loading, setLoading] = useState(true);
   const [orders, setOrders] = useState<any[]>([]);
-  const [startDate, setStartDate] = useState(new Date(new Date().setDate(new Date().getDate() - 7)).toISOString().split('T')[0]);
-  const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
+    const getTodayString = () => new Date().toISOString().split('T')[0];
+  const [startDate, setStartDate] = useState(getTodayString());
+  const [endDate, setEndDate] = useState(getTodayString());
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const today = getTodayString();
+      setStartDate(prev => prev !== today ? today : prev);
+      setEndDate(prev => prev !== today ? today : prev);
+    }, 60000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     async function fetchReport() {

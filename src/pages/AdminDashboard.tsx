@@ -13,9 +13,18 @@ export default function AdminDashboard() {
   const [stats, setStats] = useState({ onlineRev: 0, offlineRev: 0, onlineOrd: 0, offlineOrd: 0, totalItems: 0 });
 
   // STATE UNTUK FILTER TANGGAL (Default: Hari Ini)
-  const todayStr = new Date().toISOString().split('T')[0];
-  const [startDate, setStartDate] = useState(todayStr);
-  const [endDate, setEndDate] = useState(todayStr);
+    const getTodayString = () => new Date().toISOString().split('T')[0];
+  const [startDate, setStartDate] = useState(getTodayString());
+  const [endDate, setEndDate] = useState(getTodayString());
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const today = getTodayString();
+      setStartDate(prev => prev !== today ? today : prev);
+      setEndDate(prev => prev !== today ? today : prev);
+    }, 60000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     async function fetchData() {
