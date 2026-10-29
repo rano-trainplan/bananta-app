@@ -34,7 +34,6 @@ export default function Tracking() {
     };
   }, [orderId]);
 
-  // LOGIKA TIMER 1 JAM
   useEffect(() => {
     if (order?.status === 'Menunggu Pembayaran') {
       const interval = setInterval(async () => {
@@ -78,7 +77,6 @@ export default function Tracking() {
   return (
     <div className="pb-24 min-h-screen bg-gray-50 relative">
       
-      {/* STYLE ANIMASI (Ditaruh paling atas di dalam div utama) */}
       <style>{`
         @keyframes ping {
           75%, 100% { transform: scale(2); opacity: 0; }
@@ -141,22 +139,35 @@ export default function Tracking() {
           </div>
         )}
 
-        {/* PETA & KURIR */}
+        {/* PETA & KURIR (MUNCUL PAS DIKIRIM / SELESAI) */}
         {(order.status === 'Dikirim' || order.status === 'Selesai') && (
           <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden relative">
-            <div className="h-48 bg-[#E5E7EB] relative overflow-hidden">
-              <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(#4B5563 1px, transparent 1px)', backgroundSize: '20px 20px' }}></div>
+            <div className="h-48 relative overflow-hidden bg-gray-200">
+              
+              {/* GANTI BACKGROUND JADI GAMBAR PETA ASLI */}
+              <img 
+                src="https://images.unsplash.com/photo-1524661135-423995f22d0b?q=80&w=600&auto=format&fit=crop" 
+                alt="Map" 
+                className="absolute inset-0 w-full h-full object-cover opacity-60 grayscale-[30%]" 
+              />
+              
+              {/* OVERLAY GRADASI BIAR RAPI */}
+              <div className="absolute inset-0 bg-gradient-to-t from-white/80 to-transparent"></div>
+
               <svg className="absolute top-1/2 left-10 right-10 w-[calc(100%-80px)] h-10 -translate-y-1/2" preserveAspectRatio="none">
                 <path d="M0,20 Q50,0 100,20 T200,20 T300,20" fill="none" stroke="#F59E0B" strokeWidth="4" strokeDasharray="6,4" />
               </svg>
-              <div className="absolute top-1/2 left-4 -translate-y-1/2 bg-white p-2 rounded-full shadow-lg border border-gray-100 z-10"><Store size={16} className="text-orange-500" /><span className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[9px] font-bold text-gray-500">Resto</span></div>
+              
+              <div className="absolute top-1/2 left-4 -translate-y-1/2 bg-white p-2 rounded-full shadow-lg border border-gray-100 z-10"><Store size={16} className="text-orange-500" /><span className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[9px] font-bold text-gray-500 bg-white/80 px-1 rounded">Resto</span></div>
+              
               <div className={`absolute top-1/2 z-10 transition-all duration-1000 ease-in-out ${order.status === 'Dikirim' ? 'left-1/2 -translate-x-1/2 animate-bounce' : 'right-4 -translate-y-1/2 translate-x-1/2'}`}>
                 <div className="bg-orange-500 p-2.5 rounded-full shadow-lg border-2 border-white"><Bike size={18} className="text-white" /></div>
               </div>
-              <div className="absolute top-1/2 right-4 -translate-y-1/2 bg-white p-2 rounded-full shadow-lg border border-gray-100 z-10"><Navigation size={16} className="text-green-500" /><span className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[9px] font-bold text-gray-500">Tujuan</span></div>
+              
+              <div className="absolute top-1/2 right-4 -translate-y-1/2 bg-white p-2 rounded-full shadow-lg border border-gray-100 z-10"><Navigation size={16} className="text-green-500" /><span className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[9px] font-bold text-gray-500 bg-white/80 px-1 rounded">Tujuan</span></div>
             </div>
 
-            <div className="p-4 border-t border-gray-100 bg-white">
+            <div className="p-4 border-t border-gray-100 bg-white relative z-10">
               <div className="flex items-center gap-3">
                 <img src={order.courier_photo || `https://ui-avatars.com/api/?name=${order.courier_name || 'Kurir'}&background=F59E0B&color=fff`} alt="Kurir" className="w-12 h-12 rounded-full object-cover border-2 border-orange-100" />
                 <div className="flex-1">
@@ -185,7 +196,6 @@ export default function Tracking() {
             </div>
             
             <div className="relative pl-6 space-y-6">
-              {/* GARIS VERTIKAL ANIMASI */}
               <div className="absolute left-2.5 top-2 bottom-2 w-0.5 bg-gray-100 rounded-full overflow-hidden">
                 <div 
                   className="bg-green-500 w-full transition-all duration-1000 ease-in-out" 
@@ -205,15 +215,12 @@ export default function Tracking() {
                 
                 return (
                   <div key={step.key} className="relative group">
-                    {/* TITIK TIMELINE */}
                     <div className={`absolute -left-6 top-0 w-6 h-6 rounded-full flex items-center justify-center z-10 border-2 transition-all duration-500 ${
                       status === 'done' ? 'bg-green-500 border-green-500 text-white scale-110' : 
                       status === 'active' ? 'bg-orange-500 border-orange-500 text-white shadow-[0_0_0_4px_rgba(249,115,22,0.2)] scale-110' : 
                       'bg-white border-gray-200 text-gray-300 scale-100'
                     }`}>
                       <Icon size={12} strokeWidth={3} />
-                      
-                      {/* ANIMASI DENYUT (PULSE) KHUSUS YANG AKTIF */}
                       {status === 'active' && (
                         <span className="absolute inset-0 rounded-full bg-orange-400 animate-ping opacity-75"></span>
                       )}
@@ -244,7 +251,7 @@ export default function Tracking() {
           </div>
         )}
 
-        {/* BUKTI PENGANTARAN KURIR (FOTO) */}
+        {/* BUKTI PENGANTARAN KURIR (MUNCUL PAS SELESAI) */}
         {order.status === 'Selesai' && order.proof_of_delivery && (
           <div className="bg-white p-4 rounded-3xl shadow-sm border border-green-200 mb-2 animate-fade-in-up">
             <h3 className="font-bold text-sm text-green-600 mb-3 flex items-center gap-2">
