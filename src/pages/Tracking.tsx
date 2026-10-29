@@ -189,6 +189,21 @@ export default function Tracking() {
           </div>
         )}
 
+                {/* BUKTI PENGANTARAN KURIR */}
+        {order.status === 'Selesai' && order.proof_of_delivery && (
+          <div className="bg-white p-4 rounded-3xl shadow-sm border border-green-200 mb-2">
+            <h3 className="font-bold text-sm text-green-600 mb-3 flex items-center gap-2">
+              <CheckCircle size={16} /> Bukti Pengantaran Kurir
+            </h3>
+            <img 
+              src={order.proof_of_delivery} 
+              alt="Bukti Terima" 
+              className="w-full h-auto max-h-64 object-cover rounded-xl border border-gray-200 shadow-sm" 
+            />
+            <p className="text-[10px] text-center text-gray-400 mt-2 italic">Pesanan telah diterima oleh pelanggan.</p>
+          </div>
+        )}
+
         {/* ALAMAT & RINCIAN */}
         <div className="bg-white p-4 rounded-3xl shadow-sm border border-gray-100 space-y-4">
           <div className="flex items-start gap-3">
